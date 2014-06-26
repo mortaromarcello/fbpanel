@@ -1,8 +1,0 @@
-K 10
-svn:ignore
-V 28
-space.o
-space.d
-libspace.so
-
-END

@@ -1,8 +1,0 @@
-K 10
-svn:ignore
-V 28
-icons.o
-icons.d
-libicons.so
-
-END

@@ -1,8 +1,0 @@
-K 10
-svn:ignore
-V 40
-separator.o
-separator.d
-libseparator.so
-
-END
