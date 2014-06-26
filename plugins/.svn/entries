@@ -1,0 +1,134 @@
+10
+
+dir
+521
+svn://svn.code.sf.net/p/fbpanel/code/trunk/plugins
+svn://svn.code.sf.net/p/fbpanel/code
+
+
+
+2014-02-26T00:50:55.101903Z
+521
+aanatoly
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+d85e2c34-4b13-0410-ba8a-db183166e696
+
+space
+dir
+
+pager
+dir
+
+launchbar
+dir
+
+dclock
+dir
+
+mem2
+dir
+
+separator
+dir
+
+chart
+dir
+
+menu
+dir
+
+deskno2
+dir
+
+volume
+dir
+
+battery
+dir
+
+icons
+dir
+
+meter
+dir
+
+unstable
+dir
+
+Makefile
+file
+
+
+
+
+2014-06-26T05:59:56.236410Z
+80d54fedd9ffefdfdfeea75a064c7145
+2014-02-24T21:25:32.549228Z
+516
+aanatoly
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+378
+
+mem
+dir
+
+systray
+dir
+
+tclock
+dir
+
+wincmd
+dir
+
+image
+dir
+
+genmon
+dir
+
+deskno
+dir
+
+net
+dir
+
+cpu
+dir
+
+taskbar
+dir
+

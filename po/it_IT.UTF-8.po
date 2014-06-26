@@ -1,0 +1,227 @@
+# Italian translations for fbpanel package
+# Traduzioni italiane per il pacchetto fbpanel..
+# Copyright (C) 2014 THE fbpanel'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the fbpanel package.
+# Automatically generated, 2014.
+# Marcello Mortaro <mortaromarcello@gmail.com>, 2014.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: fbpanel 7.5\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2014-06-26 08:14+0200\n"
+"PO-Revision-Date: 2014-06-26 09:21+0200\n"
+"Last-Translator: Marcello Mortaro <mortaromarcello@gmail.com>\n"
+"Language-Team: Italiano <>\n"
+"Language: it\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n"
+"%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+
+#: panel/misc.c:75 panel/misc.c:81
+msgid "left"
+msgstr "sinistra\n"
+
+#: panel/misc.c:76 panel/misc.c:82
+msgid "right"
+msgstr "destra\n"
+
+#: panel/misc.c:77
+msgid "center"
+msgstr "centro\n"
+
+#: panel/misc.c:83
+msgid "top"
+msgstr "alto"
+
+#: panel/misc.c:84
+msgid "bottom"
+msgstr "basso"
+
+#: panel/misc.c:88
+msgid "dynamic"
+msgstr "dinamico"
+
+#: panel/misc.c:89 panel/gconf_panel.c:87 panel/gconf_panel.c:101
+msgid "pixels"
+msgstr "pixels"
+
+#: panel/misc.c:90
+#, c-format
+msgid "% of screen"
+msgstr "% dello schermo"
+
+#: panel/misc.c:94
+msgid "pixel"
+msgstr "pixel"
+
+#: panel/misc.c:109
+msgid "above"
+msgstr "sopra"
+
+#: panel/misc.c:110
+msgid "below"
+msgstr "sotto"
+
+#: panel/panel.c:464
+msgid "translator-credits"
+msgstr "Crediti traduttore"
+
+#: panel/gconf_panel.c:57
+msgid "<b>Visual Effects</b>"
+msgstr "<b>Effetti Visivi</b>"
+
+#: panel/gconf_panel.c:65
+msgid "Transparency"
+msgstr "Trasparenza"
+
+#: panel/gconf_panel.c:69
+msgid "Color settings"
+msgstr "Settaggio colori"
+
+#: panel/gconf_panel.c:79
+msgid "Round corners"
+msgstr "Angoli arrotondati"
+
+#: panel/gconf_panel.c:83
+msgid "Radius is "
+msgstr "Radius è"
+
+#: panel/gconf_panel.c:93
+msgid "Autohide"
+msgstr "Auto scomparsa"
+
+#: panel/gconf_panel.c:97
+msgid "Height when hidden is "
+msgstr "Altezza quando nascosto è"
+
+#: panel/gconf_panel.c:106
+msgid "Max Element Height"
+msgstr "Massima Altezza Elemento"
+
+#: panel/gconf_panel.c:138
+msgid "<b>Properties</b>"
+msgstr "<b>Proprietà</b>"
+
+#: panel/gconf_panel.c:146
+msgid "Do not cover by maximized windows"
+msgstr "Non coperto da finestre massimizzate"
+
+#: panel/gconf_panel.c:150
+msgid "Set 'Dock' type"
+msgstr "Assegna il tipo 'Dock'"
+
+#: panel/gconf_panel.c:155
+msgid "Set stacking layer"
+msgstr "Assegna il livello di sovrapposizione"
+
+#: panel/gconf_panel.c:159
+msgid "Panel is "
+msgstr "Il pannello è "
+
+#: panel/gconf_panel.c:164
+msgid "all windows"
+msgstr "tutte le finestre"
+
+#: panel/gconf_panel.c:209
+msgid "<b>Geometry</b>"
+msgstr "<b>Geometria</b>"
+
+#: panel/gconf_panel.c:216
+msgid "Width"
+msgstr "Larghezza"
+
+#: panel/gconf_panel.c:226
+msgid "Height"
+msgstr "Altezza"
+
+#: panel/gconf_panel.c:231
+msgid "Edge"
+msgstr "Bordo"
+
+#: panel/gconf_panel.c:236
+msgid "Allignment"
+msgstr "Allineamento"
+
+#: panel/gconf_panel.c:241
+msgid "Margin"
+msgstr "Margine"
+
+#: panel/gconf_panel.c:285
+#, c-format
+msgid ""
+"You're using '<b>%s</b>' profile, stored at\n"
+"<tt>%s</tt>"
+msgstr ""
+"Stai usando il profilo '<b>%s</b>', memorizzato in\n"
+"<tt>%s</tt>"
+
+#: panel/gconf_panel.c:388
+msgid "Panel"
+msgstr "Pannello"
+
+#: panel/gconf_panel.c:393
+msgid "Plugins"
+msgstr "Plugins"
+
+#: panel/gconf_panel.c:398
+msgid "Profile"
+msgstr "Profilo"
+
+#: plugins/taskbar/taskbar.c:1307
+msgid "Raise"
+msgstr "Incremento"
+
+#: plugins/taskbar/taskbar.c:1315
+msgid "Iconify"
+msgstr "Iconify"
+
+#: plugins/taskbar/taskbar.c:1335
+msgid "All workspaces"
+msgstr "Tutti gli spazi di lavoro"
+
+#: plugins/taskbar/taskbar.c:1342
+msgid "Move to workspace"
+msgstr "Sposta nello spazio di lavoro"
+
+#: plugins/menu/system_menu.c:24
+msgid "Audio & Video"
+msgstr "Audio & Video"
+
+#: plugins/menu/system_menu.c:25
+msgid "Education"
+msgstr "Istruzione"
+
+#: plugins/menu/system_menu.c:26
+msgid "Game"
+msgstr "Gioco"
+
+#: plugins/menu/system_menu.c:27
+msgid "Graphics"
+msgstr "Grafica"
+
+#: plugins/menu/system_menu.c:28
+msgid "Network"
+msgstr "Rete"
+
+#: plugins/menu/system_menu.c:29
+msgid "Office"
+msgstr "Ufficio"
+
+#: plugins/menu/system_menu.c:30
+msgid "Settings"
+msgstr "Impostazioni"
+
+#: plugins/menu/system_menu.c:31
+msgid "System"
+msgstr "Sistema"
+
+#: plugins/menu/system_menu.c:32
+msgid "Utilities"
+msgstr "Utilità"
+
+#: plugins/menu/system_menu.c:33
+msgid "Development"
+msgstr "Sviluppo"

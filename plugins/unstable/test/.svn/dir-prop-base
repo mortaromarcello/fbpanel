@@ -1,0 +1,9 @@
+K 10
+svn:ignore
+V 31
+Makefile
+test.o
+test.d
+test.so
+
+END

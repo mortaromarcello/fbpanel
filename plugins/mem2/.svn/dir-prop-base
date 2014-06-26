@@ -1,0 +1,8 @@
+K 10
+svn:ignore
+V 25
+mem2.o
+mem2.d
+libmem2.so
+
+END
