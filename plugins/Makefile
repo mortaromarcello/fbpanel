@@ -24,6 +24,7 @@ SUBDIRS := battery \
     taskbar \
     tclock \
     volume \
+    volume2 \
     wincmd
 
 include $(TOPDIR)/.config/rules.mk
