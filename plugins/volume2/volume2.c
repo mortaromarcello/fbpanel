@@ -5,6 +5,7 @@
 
 #include "misc.h"
 #include "../meter/meter.h"
+#include "run.h"
 #include <sys/ioctl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -34,6 +35,7 @@ typedef struct {
     snd_mixer_selem_id_t* sid;
     long min, max;
     int step;
+    gchar *mixer;
     guchar vol, muted_vol;
     int update_id, leave_id;
     int has_pointer;
@@ -178,9 +180,10 @@ icon_clicked(GtkWidget *widget, GdkEventButton *event, volume_priv *c)
         }
         RET(FALSE);
     }
-    if (!(event->type == GDK_BUTTON_PRESS && event->button == 2))
+    if (!(event->type == GDK_BUTTON_PRESS && event->button == 2)) {
+        run_app(c->mixer);
         RET(FALSE);
-    
+    }
     if (c->muted) {
         volume = c->muted_vol;
     } else {
@@ -257,12 +260,13 @@ volume_constructor(plugin_instance *p)
     static const char* card = "default";
     static int mix_index = 0;
     int ret = 0;
-    
     if (!(k = class_get("meter")))
         RET(0);
     if (!PLUGIN_CLASS(k)->constructor(p))
         RET(0);
     c = (volume_priv *) p;
+     XCG(p->xc, "mixer", &c->mixer, str);
+     DBG("mixer=%s\n", c->mixer);
     snd_mixer_selem_id_alloca(&c->sid);
     // sets simple-mixer index and name
     snd_mixer_selem_id_set_index(c->sid, mix_index);
