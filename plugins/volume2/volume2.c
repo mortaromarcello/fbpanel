@@ -32,6 +32,8 @@ typedef struct {
     snd_mixer_t* handle;
     snd_mixer_elem_t* elem;
     snd_mixer_selem_id_t* sid;
+    long min, max;
+    int step;
     guchar vol, muted_vol;
     int update_id, leave_id;
     int has_pointer;
@@ -49,18 +51,13 @@ static gboolean crossed(GtkWidget *widget, GdkEventCrossing *event,
 static int
 get_volume(volume_priv *c)
 {
-    long volume, minv, maxv;
-
+    long volume, temp;
     ENTER;
-    snd_mixer_selem_get_playback_volume_range(c->elem, &minv, &maxv);
     if (snd_mixer_selem_get_playback_volume(c->elem, 0, &volume) < 0) {
         ERR("volume: can't get volume\n");
         RET(0);
     }
-    volume -= minv;
-    maxv -= minv;
-    minv = 0;
-    volume = 100 * (volume) / maxv; // make the value bound from 0 to 100
+    volume = volume / c->step;
     DBG("volume=%d\n", volume);
     RET(volume);
 }
@@ -68,15 +65,9 @@ get_volume(volume_priv *c)
 static void
 set_volume(volume_priv *c, long volume)
 {
-    long minv, maxv;
     ENTER;
     DBG("volume=%d\n", volume);
-    snd_mixer_selem_get_playback_volume_range(c->elem, &minv, &maxv);
-    if (volume < 0 || volume > 100) { // out of bounds
-        DBG("volume2: out of range\n");
-        RET(0);
-    }
-    volume = (volume * (maxv - minv) / (100)) + minv;
+    volume = volume * c->step;
     if (snd_mixer_selem_set_playback_volume_all(c->elem, volume) < 0) {
         ERR("volume: don't set volume\n");
         RET(0);
@@ -298,7 +289,8 @@ volume_constructor(plugin_instance *p)
         ERR("volume2: don't find element\n");
         RET(0);
     }
-    
+    snd_mixer_selem_get_playback_volume_range(c->elem, &c->min, &c->max);
+    c->step = (int)(c->max / 100);
     //
     k->set_icons(&c->meter, names);
     c->update_id = g_timeout_add(1000, (GSourceFunc) volume_update_gui, c);
