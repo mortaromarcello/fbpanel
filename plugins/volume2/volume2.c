@@ -71,14 +71,13 @@ set_volume(volume_priv *c, long volume)
     long minv, maxv;
     ENTER;
     DBG("volume=%d\n", volume);
-
     snd_mixer_selem_get_playback_volume_range(c->elem, &minv, &maxv);
-    volume = (volume * (maxv - minv) / (100)) + minv;
-    if (snd_mixer_selem_set_playback_volume(c->elem, 0, volume) < 0) {
-        ERR("volume: don't set volume\n");
+    if (volume < 0 || volume > 100) { // out of bounds
+        DBG("volume2: out of range\n");
         RET(0);
     }
-    if (snd_mixer_selem_set_playback_volume(c->elem, 1, volume) < 0) {
+    volume = (volume * (maxv - minv) / (100)) + minv;
+    if (snd_mixer_selem_set_playback_volume_all(c->elem, volume) < 0) {
         ERR("volume: don't set volume\n");
         RET(0);
     }
