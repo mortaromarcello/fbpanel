@@ -5,7 +5,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-//#define DEBUGPRN
+#define DEBUGPRN
 #include "dbg.h"
 
 static meter_class *k;

@@ -17,7 +17,7 @@ static gboolean fget_c(gchar *path, int *value)
     fp = fopen(path, "r");
     if (fp == NULL)
         RET(FALSE);
-    &value = fgetc(fp);
+    *value = fgetc(fp);
     fclose(fp);
     RET(TRUE);
 }
@@ -31,7 +31,7 @@ static gboolean fget_s(gchar *path, gchar *value)
     if (fp == NULL)
         RET(FALSE);
     if (fgets(buf, 80, fp) == NULL)
-        RET(FALSE)
+        RET(FALSE);
     value = g_strdup(buf);
     fclose(fp);
     RET(TRUE);
@@ -69,7 +69,7 @@ get_token_int(gchar *buf, gchar *token, gint *value)
 }
 
 static gboolean
-read_sys(battery_priv *c, GString *path)
+read_sys(battery_priv *c, gchar *path)
 {
     int len, lfcap, rcap, value;
     gchar *buf;
@@ -77,7 +77,7 @@ read_sys(battery_priv *c, GString *path)
     gboolean ret, exist, charging;
     long energy_full, energy_now;
     ENTER;
-    len = path->len;
+    //len = path->len;
     temp_path = g_strconcat(path, "/present");
     //g_string_append(path, "/present");
     ret = fget_c(path, &value);
@@ -155,7 +155,7 @@ battery_update_os_proc(battery_priv *c)
     ENTER;
     c->exist = FALSE;
     path = g_string_sized_new(200);
-    g_string_append(path, PROC_ACPI);
+    g_string_append(path, SYS_ACPI);
     len = path->len;
     if (!(dir = g_dir_open(path->str, 0, NULL))) {
         DBG("can't open dir %s\n", path->str);

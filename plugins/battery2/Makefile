@@ -2,7 +2,7 @@
 
 TOPDIR := ../..
 
-battery2_src = battery.c 
+battery2_src = battery2.c 
 battery2_cflags = -DPLUGIN $(GTK2_CFLAGS) 
 battery2_libs = $(GTK2_LIBS) 
 battery2_type = lib 
