@@ -78,8 +78,7 @@ battery_update(battery_priv *c)
         gtk_widget_set_tooltip_markup(((plugin_instance *)c)->pwid, buf);
     } else {
         i = batt_na;
-        gtk_widget_set_tooltip_markup(((plugin_instance *)c)->pwid,
-            "Runing on AC\nNo battery found");
+        gtk_widget_set_tooltip_markup(((plugin_instance *)c)->pwid, "Running on AC\nNo battery found");
     }
     k->set_icons(&c->meter, i);
     k->set_level(&c->meter, c->level);
@@ -118,7 +117,7 @@ battery_destructor(plugin_instance *p)
 
 static plugin_class class = {
     .count       = 0,
-    .type        = "battery",
+    .type        = "battery2",
     .name        = "battery usage",
     .version     = "1.0",
     .description = "Display battery usage",
