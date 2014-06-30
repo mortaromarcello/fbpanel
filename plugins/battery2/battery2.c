@@ -73,12 +73,12 @@ battery_update(battery_priv *c)
     battery_update_os(c);
     if (c->exist) {
         i = c->charging ? batt_charging : batt_working;
-        g_snprintf(buf, sizeof(buf), "<b>Battery:</b> %d%%%s",
-            (int) c->level, c->charging ? "\nCharging" : "");
+        g_snprintf(buf, sizeof(buf), _("<b>Battery:</b> %d%%%s"),
+            (int) c->level, c->charging ? _("\nCharging") : "");
         gtk_widget_set_tooltip_markup(((plugin_instance *)c)->pwid, buf);
     } else {
         i = batt_na;
-        gtk_widget_set_tooltip_markup(((plugin_instance *)c)->pwid, "Running on AC\nNo battery found");
+        gtk_widget_set_tooltip_markup(((plugin_instance *)c)->pwid, _("Running on AC\nNo battery found"));
     }
     k->set_icons(&c->meter, i);
     k->set_level(&c->meter, c->level);

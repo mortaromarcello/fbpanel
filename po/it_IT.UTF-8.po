@@ -4,28 +4,28 @@
 # This file is distributed under the same license as the fbpanel package.
 # Automatically generated, 2014.
 # Marcello Mortaro <mortaromarcello@gmail.com>, 2014.
-#
 msgid ""
 msgstr ""
 "Project-Id-Version: fbpanel 7.5\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2014-06-26 08:14+0200\n"
-"PO-Revision-Date: 2014-06-26 20:25+0200\n"
+"PO-Revision-Date: 2014-06-30 21:52+0200\n"
 "Last-Translator: Marcello Mortaro <mortaromarcello@gmail.com>\n"
 "Language-Team: Italiano <>\n"
 "Language: it\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n"
-"%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "X-Generator: Virtaal 0.7.1\n"
 
-#: panel/misc.c:75 panel/misc.c:81
+#: panel/misc.c:75
+#: panel/misc.c:81
 msgid "left"
 msgstr "sinistra"
 
-#: panel/misc.c:76 panel/misc.c:82
+#: panel/misc.c:76
+#: panel/misc.c:82
 msgid "right"
 msgstr "destra"
 
@@ -45,7 +45,9 @@ msgstr "basso"
 msgid "dynamic"
 msgstr "dinamico"
 
-#: panel/misc.c:89 panel/gconf_panel.c:87 panel/gconf_panel.c:101
+#: panel/misc.c:89
+#: panel/gconf_panel.c:87
+#: panel/gconf_panel.c:101
 msgid "pixels"
 msgstr "pixels"
 
@@ -226,3 +228,25 @@ msgstr "Utilità"
 #: plugins/menu/system_menu.c:33
 msgid "Development"
 msgstr "Sviluppo"
+
+#: plugins/battery2/battery2.c:76
+#, c-format
+msgid "<b>Battery:</b> %d%%%s"
+msgstr "<b>Batteria:</b> %d%%s"
+
+#: plugins/battery2/battery2.c:77
+#, fuzzy
+msgid ""
+"\n"
+"Charging"
+msgstr ""
+"\n"
+"In carica"
+
+#: plugins/battery2/battery2.c:81
+msgid ""
+"Running on AC\n"
+"No battery found"
+msgstr ""
+"Alimentazione in AC\n"
+"Batteria non trovata"
