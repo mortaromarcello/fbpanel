@@ -1,43 +1,18 @@
-
 #include <string.h>
 #include <ctype.h>
 #include <stdio.h>
+#include <dirent.h>
+#include <unistd.h>
 
 #define LEN 100
 #define PROC_ACPI "/proc/acpi/battery/"
-#define SYS_ACPI "/sys/class/power_supply/BAT0"
-#define CHARGING "Charging"
-#define DISCHARGING "Discharging"
-#define FULL "Full"
-#define UNKNOWN "Unknown"
 
-
-static gboolean fget_c(gchar *path, int *value)
+int file_exist(const char *path)
 {
-    FILE *fp;
-    fp = fopen(path, "r");
-    if (fp == NULL){
-        DBG("battery2: not open %s\n", path);
-        RET(FALSE);
-    }
-    *value = fgetc(fp);
-    fclose(fp);
-    RET(TRUE);
-}
-
-static gboolean fget_s(gchar *path, gchar *value)
-{
-    FILE *fp;
-    gchar *buf;
-    buf = g_malloc(80);
-    fp = fopen(path, "r");
-    if (fp == NULL)
-        RET(FALSE);
-    if (fgets(buf, 80, fp) == NULL)
-        RET(FALSE);
-    value = g_strdup(buf);
-    fclose(fp);
-    RET(TRUE);
+    if (access(path, F_OK) != -1)
+        return 1;
+    else
+        return 0;
 }
 
 static gboolean
@@ -71,6 +46,7 @@ get_token_int(gchar *buf, gchar *token, gint *value)
     RET(FALSE);
 }
 
+static gboolean
 read_proc(battery_priv *c, GString *path)
 {
     int len, lfcap, rcap;
@@ -119,43 +95,99 @@ read_proc(battery_priv *c, GString *path)
     RET(TRUE);
 }
 
+//
 static gboolean
-read_sys(battery_priv *c, GString *path)
+read_sys(battery_priv *c)
 {
-    int len, lfcap, rcap, value;
-    gchar *buf;
-    gchar *temp_path;
-    gboolean ret, exist, charging;
-    long energy_full, energy_now;
-    
-    ENTER;
-    //len = path->len;
-    temp_path = g_strconcat(path->str, "/present", NULL);
-    ret = fget_c(temp_path, &value);
-    if (ret == TRUE)
-        exist = (value == 1) ? TRUE:FALSE;
-    else {
-        DBG("battery2: not read value\n");
+    DIR *dir;
+    struct dirent *dirent;
+    FILE *file;
+
+    char filename[256];
+    c->exist = FALSE;
+
+    dir = opendir("/sys/class/power_supply");
+    if (!dir) {
+        DBG("don't open sysfs\n");
         RET(FALSE);
     }
-    g_free(temp_path);
-    temp_path = g_strconcat(path, "/status", NULL);
-    ret = fget_s(path, buf);
-    if (ret == TRUE)
-        charging = (! g_strcmp0(buf, CHARGING)) ? TRUE:FALSE;
-    g_free(buf); g_free(temp_path);
-    temp_path = g_strconcat(path, "/energy_full", NULL);
-    ret = fget_s(path, buf);
-    if (ret == TRUE)
-        energy_full = g_ascii_strtoll(buf, NULL, 0);
-    g_free(buf); g_free(temp_path);
-    temp_path = g_strconcat(path, "/energy_now", NULL);
-    ret = fget_s(path, buf);
-    if (ret == TRUE)
-        energy_now = g_ascii_strtoll(buf, NULL, 0);
-    c->exist = exist;
-    c->charging = charging;
-    c->level = (int) ((gfloat) energy_now *100 / (gfloat) energy_full);
+
+    while ((dirent = readdir(dir))) {
+        double charge_now = 0.0;
+        double charge_full = 0.0;
+        char line[1024];
+        file = NULL;
+
+        if (strstr(dirent->d_name, "AC"))
+            continue;
+        sprintf(filename, "/sys/class/power_supply/%s/present", dirent->d_name);
+        file = fopen(filename, "r");
+        if (!file)
+            continue;
+        int s;
+        if ((s = getc(file)) != EOF) {
+            if (s == 0)
+                break;
+            else
+                c->exist = TRUE;
+            DBG("exist:%s\n", (c->exist)?"Yes":"No");
+        }
+        fclose(file);
+
+        sprintf(filename, "/sys/class/power_supply/%s/status", dirent->d_name);
+        file = fopen(filename, "r");
+        if (!file)
+            continue;
+        memset(line, 0, 1024);
+        if (fgets(line, 1024, file) != NULL) {
+            if (!strstr(line, "Discharging"))
+                c->charging = TRUE;
+            else
+                c->charging = FALSE;
+            DBG("status:%d\n", c->charging);
+        }
+        fclose(file);
+
+        sprintf(filename, "/sys/class/power_supply/%s/charge_full", dirent->d_name);
+        if (file_exist(filename))
+            file = fopen(filename, "r");
+        else
+        {
+            sprintf(filename, "/sys/class/power_supply/%s/energy_full", dirent->d_name);
+            if (file_exist(filename))
+                file = fopen(filename, "r");
+        }
+        if (!file)
+            continue;
+        memset(line, 0, 1024);
+        if (fgets(line, 1024, file) != NULL) {
+            charge_full = strtoull(line, NULL, 10) / 1000000.0;
+            DBG("charge_full:%g\n", charge_full);
+        }
+        fclose(file);
+        
+        sprintf(filename, "/sys/class/power_supply/%s/charge_now", dirent->d_name);
+        if (file_exist(filename))
+            file = fopen(filename, "r");
+        else
+        {
+            sprintf(filename, "/sys/class/power_supply/%s/energy_now", dirent->d_name);
+            if (file_exist(filename))
+                file = fopen(filename, "r");
+        }
+        if (!file)
+            continue;
+        memset(line, 0, 1024);
+        if (fgets(line, 1024, file) != NULL) {
+            charge_now = strtoull(line, NULL, 10) / 1000000.0;
+            DBG("charge_now:%g\n", charge_now);
+        }
+        fclose(file);
+
+        c->level = (int)(charge_now * 100 / charge_full);
+        DBG("percent:%g\n", c->level);
+    }
+    closedir(dir);
     RET(TRUE);
 }
 
@@ -195,36 +227,10 @@ out:
 static gboolean
 battery_update_os_sys(battery_priv *c)
 {
-    GString *path;
-    int len;
-    GDir *dir;
     gboolean ret = FALSE;
-    const gchar *file;
 
     ENTER;
-    c->exist = FALSE;
-    path = g_string_sized_new(200);
-    g_string_append(path, SYS_ACPI);
-    /*len = path->len;
-    if (!(dir = g_dir_open(path->str, 0, NULL))) {
-        DBG("can't open dir %s\n", path->str);
-        goto out;
-    }
-    
-    while (!ret && (file = g_dir_read_name(dir))) {
-        g_string_append(path, file);
-        DBG("testing %s\n", path->str);
-        ret = g_file_test(path->str, G_FILE_TEST_IS_DIR);
-        if (ret)
-            ret = read_proc(c, path);
-        g_string_truncate(path, len);
-    }
-    g_dir_close(dir);
-    */
-    ret = read_sys(c, path);
-    
-out:
-    g_string_free(path, TRUE);
+    ret = read_sys(c);
     RET(ret);
 }
 
