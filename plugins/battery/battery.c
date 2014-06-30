@@ -1,27 +1,24 @@
 #include "misc.h"
 #include "../meter/meter.h"
-#include <stdlib.h>
-#include <string.h>
 #include <sys/ioctl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <libacpi.h>
 
-#define DEBUGPRN
+//#define DEBUGPRN
 #include "dbg.h"
+
+static meter_class *k;
 
 typedef struct {
     meter_priv meter;
     int timer;
-    int level;
-    global_t global;
-    int num_batt;
+    gfloat level;
     gboolean charging;
     gboolean exist;
 } battery_priv;
 
-static meter_class *k;
+static gboolean battery_update_os(battery_priv *c);
 
 static gchar *batt_working[] = {
     "battery_0",
@@ -54,18 +51,17 @@ static gchar *batt_na[] = {
     NULL
 };
 
+#if defined __linux__
+#include "os_linux.c"
+#else
+
 static void
 battery_update_os(battery_priv *c)
 {
-    init_acpi_batt(&c->global);
-    if (read_acpi_batt(c->num_batt) == ITEM_EXCEED) {
-        DBG("battery: battery not found\n");
-        RET(0);
-    }
-    c->exist = batteries[1].present;
-    c->charging = (batteries[1].charge_state == C_CHARGE) ? 1 : 0;
-    c->level = batteries[1].percentage;
+    c->exist = FALSE;
 }
+
+#endif
 
 static gboolean
 battery_update(battery_priv *c)
@@ -75,11 +71,10 @@ battery_update(battery_priv *c)
 
     ENTER;
     battery_update_os(c);
-    DBG("battery: level=%d\n", c->level);
     if (c->exist) {
         i = c->charging ? batt_charging : batt_working;
-        //g_snprintf(buf, sizeof(buf), "<b>Battery:</b> %d%%%s", (int) c->level, c->charging ? "\nCharging" : "");
-        g_snprintf(buf, sizeof(buf), "<b>Battery:</b> %d%%", (int) c->level);
+        g_snprintf(buf, sizeof(buf), "<b>Battery:</b> %d%%%s",
+            (int) c->level, c->charging ? "\nCharging" : "");
         gtk_widget_set_tooltip_markup(((plugin_instance *)c)->pwid, buf);
     } else {
         i = batt_na;
@@ -96,30 +91,13 @@ static int
 battery_constructor(plugin_instance *p)
 {
     battery_priv *c;
-    int i;
-    
+
     ENTER;
     if (!(k = class_get("meter")))
         RET(0);
     if (!PLUGIN_CLASS(k)->constructor(p))
         RET(0);
     c = (battery_priv *) p;
-    if (check_acpi_support() == NOT_SUPPORTED) {
-        DBG("battery: acpi not  supported\n");
-        RET(0);
-    }
-    if (init_acpi_batt(&c->global) == NOT_SUPPORTED) {
-        DBG("battery: battery not supported\n");
-        RET(0);
-    }
-    for (i = 0; i < c->global.batt_count; i++) {
-        read_acpi_batt(i);
-        if (! strcmp(batteries[i].name, "BAT1")) {
-            c->num_batt = i;
-            break;
-        }
-    }
-    DBG("battery constructor\n");
     c->timer = g_timeout_add(2000, (GSourceFunc) battery_update, c);
     battery_update(c);
     RET(1);
