@@ -108,7 +108,7 @@ read_sys(battery_priv *c)
 
     dir = opendir("/sys/class/power_supply");
     if (!dir) {
-        DBG("don't open /sys/class/power_supply\n");
+        DBG("don't open /sys/class/power_supply/\n");
         RET(FALSE);
     }
 
