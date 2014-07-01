@@ -16,6 +16,7 @@ typedef struct {
     gfloat level;
     gboolean charging;
     gboolean exist;
+    int show_icon_in_ac;
 } battery_priv;
 
 static gboolean battery_update_os(battery_priv *c);
@@ -76,12 +77,19 @@ battery_update(battery_priv *c)
         g_snprintf(buf, sizeof(buf), _("<b>Battery:</b> %d%%%s"),
             (int) c->level, c->charging ? _("\nCharging") : "");
         gtk_widget_set_tooltip_markup(((plugin_instance *)c)->pwid, buf);
+        k->set_icons(&c->meter, i);
+        k->set_level(&c->meter, c->level);
     } else {
-        i = batt_na;
-        gtk_widget_set_tooltip_markup(((plugin_instance *)c)->pwid, _("Running on AC\nNo battery found"));
+        if (c->show_icon_in_ac) {
+            i = batt_na;
+            gtk_widget_set_tooltip_markup(((plugin_instance *)c)->pwid, _("Running on AC\nNo battery found"));
+            k->set_icons(&c->meter, i);
+            k->set_level(&c->meter, c->level);
+        }
+        else
+            RET(FALSE);
     }
-    k->set_icons(&c->meter, i);
-    k->set_level(&c->meter, c->level);
+
     RET(TRUE);
 }
 
@@ -97,6 +105,9 @@ battery_constructor(plugin_instance *p)
     if (!PLUGIN_CLASS(k)->constructor(p))
         RET(0);
     c = (battery_priv *) p;
+    c->show_icon_in_ac = 0;
+    XCG(p->xc, "showiconinac", &c->show_icon_in_ac, enum, bool_enum);
+    DBG("ShowIconInAC = %s\n", (c->show_icon_in_ac) ? "True":"False");
     c->timer = g_timeout_add(2000, (GSourceFunc) battery_update, c);
     battery_update(c);
     RET(1);

@@ -265,8 +265,8 @@ volume_constructor(plugin_instance *p)
     if (!PLUGIN_CLASS(k)->constructor(p))
         RET(0);
     c = (volume_priv *) p;
-     XCG(p->xc, "mixer", &c->mixer, str);
-     DBG("mixer=%s\n", c->mixer);
+    XCG(p->xc, "mixer", &c->mixer, str);
+    DBG("mixer=%s\n", c->mixer);
     snd_mixer_selem_id_alloca(&c->sid);
     // sets simple-mixer index and name
     snd_mixer_selem_id_set_index(c->sid, mix_index);
