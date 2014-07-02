@@ -107,12 +107,13 @@ battery_update(battery_priv *c)
         k->set_icons(&c->meter, i);
         k->set_level(&c->meter, c->level);
         if ((c->level <= c->low_limit_notify) && !c->notify_sended && !c->charging){
-            send_notify(g_strdup_printf(_("Battery running low. The system will be \n terminated in %d minutes"), c->low_limit_notify - c->low_limit));
+            //send_notify(g_strdup_printf(_("Battery running low. The system will be \n terminated in %d minutes"), c->low_limit_notify - c->low_limit));
+            send_notify(_("Battery running low. The system will be \n terminated"));
             c->notify_sended = TRUE;
         }
         if ((c->level <= c->low_limit) && !c->charging) {
-            run_app(commands_shutdown[c->type_shutdown]);
             DBG("battery: %s\n", commands_shutdown[c->type_shutdown]);
+            run_app(commands_shutdown[c->type_shutdown]);
         }
     } else {
         if (c->show_icon_in_ac) {
@@ -142,12 +143,17 @@ battery_constructor(plugin_instance *p)
     notify_init("battery");
     c = (battery_priv *) p;
     c->show_icon_in_ac = 0;
+    c->low_limit = 2;
+    c->low_limit_notify = 5;
     c->notify_sended = FALSE;
     XCG(p->xc, "showiconinac", &c->show_icon_in_ac, enum, bool_enum);
     XCG(p->xc, "lowlimit", &c->low_limit, int);
     XCG(p->xc, "lowlimitnotify", &c->low_limit_notify, int);
     XCG(p->xc, "typeshutdown", &c->type_shutdown, int);
-    DBG("ShowIconInAC = %s\n", (c->show_icon_in_ac) ? "True" : "False");
+    if (c->low_limit_notify <= c->low_limit) {
+        c->low_limit_notify = c->low_limit + 3;
+    }
+    DBG("ShowIconInAC=%s, LowLimit=%d, LowLimitNotify=%d, TypeShutdown=%s\n", (c->show_icon_in_ac) ? "True" : "False", c->low_limit, c->low_limit_notify, commands_shutdown[c->type_shutdown]);
     c->timer = g_timeout_add(2000, (GSourceFunc) battery_update, c);
     battery_update(c);
     RET(1);

@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: fbpanel 6.2\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2014-07-02 19:05+0200\n"
-"PO-Revision-Date: 2014-07-02 19:09+0200\n"
+"POT-Creation-Date: 2014-07-02 19:52+0200\n"
+"PO-Revision-Date: 2014-07-02 19:53+0200\n"
 "Last-Translator: Marcello Mortaro <mortaromarcello@gmail.com>\n"
 "Language-Team: mortaromarcello@gmail.com\n"
 "Language: it\n"
@@ -88,16 +88,15 @@ msgstr ""
 "\n"
 "In Carica"
 
-#: plugins/battery2/battery2.c:110
-#, c-format
+#: plugins/battery2/battery2.c:111
 msgid ""
 "Battery running low. The system will be \n"
-" terminated in %d minutes"
+" terminated"
 msgstr ""
 "Batteria in esaurimento. Il sistema sarà \n"
-"terminato tra %d minuti"
+"terminato"
 
-#: plugins/battery2/battery2.c:120
+#: plugins/battery2/battery2.c:121
 msgid ""
 "Running on AC\n"
 "No battery found"
