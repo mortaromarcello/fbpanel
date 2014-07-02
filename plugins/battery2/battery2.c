@@ -4,6 +4,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <libnotify/notify.h>
 
 #define DEBUGPRN
 #include "dbg.h"
@@ -17,9 +18,20 @@ typedef struct {
     gboolean charging;
     gboolean exist;
     int show_icon_in_ac;
+    int low_limit;
+    int low_limit_notify;
+    int type_shutdown;
+    gboolean notify_sended;
 } battery_priv;
 
 static gboolean battery_update_os(battery_priv *c);
+
+static gchar *commands_shutdown[] = {
+    "sudo shutdown -h now",
+    "sudo pm-suspend",
+    "sudo pm-hibernate",
+    "sudo pm-suspend-hybrid",
+};
 
 static gchar *batt_working[] = {
     "battery_0",
@@ -65,6 +77,21 @@ battery_update_os(battery_priv *c)
 #endif
 
 static gboolean
+send_notify(const gchar *message)
+{
+    NotifyNotification *n;  
+    n = notify_notification_new ("Alert", message, NULL);
+    notify_notification_set_timeout (n, 5000); // 5 seconds
+    if (!notify_notification_show (n, NULL)) 
+    {
+        DBG("failed to send notification\n");
+        RET(FALSE);
+    }
+    g_object_unref(G_OBJECT(n));
+    RET(TRUE);
+}
+
+static gboolean
 battery_update(battery_priv *c)
 {
     gchar buf[50];
@@ -79,6 +106,15 @@ battery_update(battery_priv *c)
         gtk_widget_set_tooltip_markup(((plugin_instance *)c)->pwid, buf);
         k->set_icons(&c->meter, i);
         k->set_level(&c->meter, c->level);
+        if ((c->level <= c->low_limit_notify) && !c->notify_sended && !c->charging){
+            send_notify("Low limit level battery. Il sistema sarà riavviato");
+            c->notify_sended = TRUE;
+            
+        }
+        if ((c->level <= c->low_limit) && !c->charging) {
+            run_app(commands_shutdown[c->type_shutdown]);
+            DBG("battery: %s\n", commands_shutdown[c->type_shutdown]);
+        }
     } else {
         if (c->show_icon_in_ac) {
             i = batt_na;
@@ -104,10 +140,15 @@ battery_constructor(plugin_instance *p)
         RET(0);
     if (!PLUGIN_CLASS(k)->constructor(p))
         RET(0);
+    notify_init("battery");
     c = (battery_priv *) p;
     c->show_icon_in_ac = 0;
+    c->notify_sended = FALSE;
     XCG(p->xc, "showiconinac", &c->show_icon_in_ac, enum, bool_enum);
-    DBG("ShowIconInAC = %s\n", (c->show_icon_in_ac) ? "True":"False");
+    XCG(p->xc, "lowlimit", &c->low_limit, int);
+    XCG(p->xc, "lowlimitnotify", &c->low_limit_notify, int);
+    XCG(p->xc, "typeshutdown", &c->type_shutdown, int);
+    DBG("ShowIconInAC = %s\n", (c->show_icon_in_ac) ? "True" : "False");
     c->timer = g_timeout_add(2000, (GSourceFunc) battery_update, c);
     battery_update(c);
     RET(1);
