@@ -107,9 +107,8 @@ battery_update(battery_priv *c)
         k->set_icons(&c->meter, i);
         k->set_level(&c->meter, c->level);
         if ((c->level <= c->low_limit_notify) && !c->notify_sended && !c->charging){
-            send_notify("Low limit level battery. Il sistema sarà riavviato");
+            send_notify(g_strdup_printf(_("Battery running low. The system will be \n terminated in %d minutes"), c->low_limit_notify - c->low_limit));
             c->notify_sended = TRUE;
-            
         }
         if ((c->level <= c->low_limit) && !c->charging) {
             run_app(commands_shutdown[c->type_shutdown]);

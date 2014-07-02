@@ -118,7 +118,7 @@ read_sys(battery_priv *c)
         char line[1024];
         file = NULL;
 
-        if (strstr(dirent->d_name, "AC"))
+        if (strstr(dirent->d_name, "AC") || strstr(dirent->d_name, "ACAD"))
             continue;
         sprintf(filename, "/sys/class/power_supply/%s/present", dirent->d_name);
         file = fopen(filename, "r");
@@ -130,7 +130,7 @@ read_sys(battery_priv *c)
                 break;
             else
                 c->exist = TRUE;
-            DBG("exist:%s\n", (c->exist)?"Yes":"No");
+            DBG("exist:%s\n", (c->exist) ? "Yes" : "No");
         }
         fclose(file);
 
