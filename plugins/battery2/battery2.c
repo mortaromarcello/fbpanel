@@ -158,6 +158,7 @@ battery_constructor(plugin_instance *p)
     c->low_limit = 2;
     c->low_limit_notify = 5;
     c->notify_sended = FALSE;
+    c->type_shutdown = 0;
     XCG(p->xc, "showiconinac", &c->show_icon_in_ac, enum, bool_enum);
     XCG(p->xc, "lowlimit", &c->low_limit, int);
     XCG(p->xc, "lowlimitnotify", &c->low_limit_notify, int);
