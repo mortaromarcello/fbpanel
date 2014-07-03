@@ -162,7 +162,7 @@ read_sys(battery_priv *c)
             continue;
         memset(line, 0, 1024);
         if (fgets(line, 1024, file) != NULL) {
-            charge_full = strtoull(line, NULL, 10) / 1000000.0;
+            charge_full = strtoull(line, NULL, 10) / 1000.0;
             DBG("charge_full:%g\n", charge_full);
         }
         fclose(file);
@@ -180,17 +180,14 @@ read_sys(battery_priv *c)
             continue;
         memset(line, 0, 1024);
         if (fgets(line, 1024, file) != NULL) {
-            charge_now = strtoull(line, NULL, 10) / 1000000.0;
+            charge_now = strtoull(line, NULL, 10) / 1000.0;
             DBG("charge_now:%g\n", charge_now);
         }
         fclose(file);
 
         c->level = (int)(charge_now * 100 / charge_full);
-        c->prev_charge_now = c->charge_now;
         c->charge_now = charge_now;
         c->charge_full = charge_full;
-        c->prev_time = c->time;
-        c->time = g_get_real_time();
         DBG("percent:%g\n", c->level);
     }
     closedir(dir);

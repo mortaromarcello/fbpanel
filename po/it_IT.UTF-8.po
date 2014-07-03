@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: fbpanel 6.2\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2014-07-02 19:52+0200\n"
-"PO-Revision-Date: 2014-07-02 19:53+0200\n"
+"POT-Creation-Date: 2014-07-03 10:18+0200\n"
+"PO-Revision-Date: 2014-07-03 10:21+0200\n"
 "Last-Translator: Marcello Mortaro <mortaromarcello@gmail.com>\n"
 "Language-Team: mortaromarcello@gmail.com\n"
 "Language: it\n"
@@ -75,12 +75,12 @@ msgstr "Utilità"
 msgid "Development"
 msgstr "Sviluppo"
 
-#: plugins/battery2/battery2.c:104
+#: plugins/battery2/battery2.c:109
 #, c-format
-msgid "<b>Battery:</b> %d%%%s"
-msgstr "<b>Batteria:</b> %d%%%s"
+msgid "<b>Battery:</b> %d%%%s%s%d min."
+msgstr "<b>Batteria:</b> %d%%%s%s%d min."
 
-#: plugins/battery2/battery2.c:105
+#: plugins/battery2/battery2.c:109
 msgid ""
 "\n"
 "Charging"
@@ -88,15 +88,24 @@ msgstr ""
 "\n"
 "In Carica"
 
-#: plugins/battery2/battery2.c:111
+#: plugins/battery2/battery2.c:109
+msgid ""
+"\n"
+"Remaining:"
+msgstr ""
+"\n"
+"Rimanente:"
+
+#: plugins/battery2/battery2.c:114
+#, c-format
 msgid ""
 "Battery running low. The system will be \n"
-" terminated"
+" terminated in %d minutes"
 msgstr ""
 "Batteria in esaurimento. Il sistema sarà \n"
-"terminato"
+"terminato tra %d minuti"
 
-#: plugins/battery2/battery2.c:121
+#: plugins/battery2/battery2.c:124
 msgid ""
 "Running on AC\n"
 "No battery found"
