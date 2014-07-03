@@ -1,5 +1,6 @@
 #include "misc.h"
 #include "../meter/meter.h"
+#include "run.h"
 #include <sys/ioctl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -22,15 +23,23 @@ typedef struct {
     int low_limit_notify;
     int type_shutdown;
     gboolean notify_sended;
+    double prev_charge_now;
+    gint64 prev_time;
+    gint64 time;
+    gint64 remaining_time;
+    double charge_now;
+    double charge_full;
+    double delta_charge;
+    
 } battery_priv;
 
 static gboolean battery_update_os(battery_priv *c);
 
 static gchar *commands_shutdown[] = {
     "sudo shutdown -h now",
-    "sudo pm-suspend",
-    "sudo pm-hibernate",
-    "sudo pm-suspend-hybrid",
+    "pm-is-supported --suspend && sudo pm-suspend",
+    "pm-is-supported --hibernate && sudo pm-hibernate",
+    "pm-is-supported --suspend-hybrid && sudo pm-suspend-hybrid",
 };
 
 static gchar *batt_working[] = {
@@ -76,6 +85,26 @@ battery_update_os(battery_priv *c)
 
 #endif
 
+static void
+calculate_remaining_time(battery_priv *c)
+{
+    double delta_charge;
+    gint64 delta_time;
+    
+    if (c->charge_now > c->prev_charge_now) {
+        delta_charge = c->charge_now - c->prev_charge_now;
+        delta_time = c->time - c->prev_time;
+        c->remaining_time = ((c->charge_full / delta_charge) * delta_time);
+    }
+    else if (c->charge_now < c->prev_charge_now) {
+        delta_charge = c->prev_charge_now - c->charge_now;
+        delta_time = c->time - c->prev_time;
+        c->remaining_time = ((c->charge_full / delta_charge) * delta_time);
+    }
+    else
+        c->remaining_time = 0.0;
+}
+
 static gboolean
 send_notify(const gchar *message)
 {
@@ -106,6 +135,8 @@ battery_update(battery_priv *c)
         gtk_widget_set_tooltip_markup(((plugin_instance *)c)->pwid, buf);
         k->set_icons(&c->meter, i);
         k->set_level(&c->meter, c->level);
+        calculate_remaining_time(c);
+        DBG("remaining_time:%ld, charging:%d\n", c->remaining_time/10000, c->charging);
         if ((c->level <= c->low_limit_notify) && !c->notify_sended && !c->charging){
             //send_notify(g_strdup_printf(_("Battery running low. The system will be \n terminated in %d minutes"), c->low_limit_notify - c->low_limit));
             send_notify(_("Battery running low. The system will be \n terminated"));
@@ -146,6 +177,12 @@ battery_constructor(plugin_instance *p)
     c->low_limit = 2;
     c->low_limit_notify = 5;
     c->notify_sended = FALSE;
+    c->time = g_get_real_time();
+    c->prev_time = 0;
+    c->charge_full = 0.0;
+    c->charge_now = 0.0;
+    c->prev_charge_now = 0.0;
+    c->level = 0;
     XCG(p->xc, "showiconinac", &c->show_icon_in_ac, enum, bool_enum);
     XCG(p->xc, "lowlimit", &c->low_limit, int);
     XCG(p->xc, "lowlimitnotify", &c->low_limit_notify, int);

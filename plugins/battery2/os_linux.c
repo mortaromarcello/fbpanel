@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <dirent.h>
 #include <unistd.h>
+#include <stdlib.h>
 
 #define LEN 100
 #define PROC_ACPI "/proc/acpi/battery/"
@@ -185,6 +186,11 @@ read_sys(battery_priv *c)
         fclose(file);
 
         c->level = (int)(charge_now * 100 / charge_full);
+        c->prev_charge_now = c->charge_now;
+        c->charge_now = charge_now;
+        c->charge_full = charge_full;
+        c->prev_time = c->time;
+        c->time = g_get_real_time();
         DBG("percent:%g\n", c->level);
     }
     closedir(dir);
