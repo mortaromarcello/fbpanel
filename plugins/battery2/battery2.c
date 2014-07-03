@@ -99,14 +99,23 @@ send_notify(const gchar *message)
 static gboolean
 battery_update(battery_priv *c)
 {
-    gchar buf[50];
+    gchar buf[60];
     gchar **i;
 
     ENTER;
     battery_update_os(c);
     if (c->exist) {
-        i = c->charging ? batt_charging : batt_working;
-        g_snprintf(buf, sizeof(buf), _("<b>Battery:</b> %d%%%s%s%d min."), (int) c->level, c->charging ? _("\nCharging") : "", _("\nRemaining:"), (!c->charging) ? ((int)c->charge_now / 60):((int)(c->charge_full - c->charge_now) / 60));
+        if (c->charging) {
+            i = batt_charging;
+            if (c->level == 100)
+            g_snprintf(buf, sizeof(buf), _("<b>Battery:</b> %d%%"), (int) c->level);
+            else
+                g_snprintf(buf, sizeof(buf), _("<b>Battery:</b> %d%%\n%s %d min."), (int) c->level, _("Be left to full\ncharge:"), ((int)(c->charge_full - c->charge_now) / 60));
+        }
+        else {
+            i = batt_working;
+            g_snprintf(buf, sizeof(buf), _("<b>Battery:</b> %d%%\n%s %d min."), (int) c->level, _("Be left to full\ndischarge:"), ((int)c->charge_now / 60));
+        }
         gtk_widget_set_tooltip_markup(((plugin_instance *)c)->pwid, buf);
         k->set_icons(&c->meter, i);
         k->set_level(&c->meter, c->level);
