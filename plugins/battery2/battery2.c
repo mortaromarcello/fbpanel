@@ -7,7 +7,7 @@
 #include <fcntl.h>
 #include <libnotify/notify.h>
 
-#define DEBUGPRN
+//#define DEBUGPRN
 #include "dbg.h"
 
 static meter_class *k;
