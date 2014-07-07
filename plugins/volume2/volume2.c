@@ -59,7 +59,7 @@ get_volume(volume_priv *c)
         ERR("volume: can't get volume\n");
         RET(0);
     }
-    volume = volume / c->step;
+    volume = (c->step > 0) ? volume / c->step : 0;
     DBG("volume=%d\n", volume);
     RET(volume);
 }
