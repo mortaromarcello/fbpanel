@@ -5,6 +5,7 @@ TOPDIR := ..
 SUBDIRS := battery \
     battery2 \
     chart \
+    configure \
     cpu \
     dclock \
     deskno \
