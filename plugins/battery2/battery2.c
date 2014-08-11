@@ -1,3 +1,4 @@
+#include "batt_sys.h"
 #include "misc.h"
 #include "../meter/meter.h"
 #include "run.h"
@@ -15,27 +16,20 @@ static meter_class *k;
 typedef struct {
     meter_priv meter;
     int timer;
-    gfloat level;
     gboolean charging;
-    gboolean exist;
     int show_icon_in_ac;
     int low_limit;
     int low_limit_notify;
     int type_shutdown;
     gboolean notify_sended;
-    double charge_now;
-    double charge_full;
-    double delta_charge;
-    
+    battery *b;
 } battery_priv;
 
-static gboolean battery_update_os(battery_priv *c);
-
 static gchar *commands_shutdown[] = {
-    "sudo shutdown -h now",
-    "pm-is-supported --suspend && sudo pm-suspend",
-    "pm-is-supported --hibernate && sudo pm-hibernate",
-    "pm-is-supported --suspend-hybrid && sudo pm-suspend-hybrid",
+    "gksudo shutdown -h now",
+    "pm-is-supported --suspend && gksudo pm-suspend",
+    "pm-is-supported --hibernate && gksudo pm-hibernate",
+    "pm-is-supported --suspend-hybrid && gksudo pm-suspend-hybrid",
 };
 
 static gchar *batt_working[] = {
@@ -69,17 +63,14 @@ static gchar *batt_na[] = {
     NULL
 };
 
-#if defined __linux__
-#include "os_linux.c"
-#else
-
 static void
 battery_update_os(battery_priv *c)
 {
-    c->exist = FALSE;
+	if (c->b == NULL)
+		return;
+	battery_update(c->b);
+	c->charging = battery_is_charging(c->b);
 }
-
-#endif
 
 static gboolean
 send_notify(const gchar *message)
@@ -97,33 +88,33 @@ send_notify(const gchar *message)
 }
 
 static gboolean
-battery_update(battery_priv *c)
+battery_manage(battery_priv *c)
 {
     gchar buf[60];
     gchar **i;
 
     ENTER;
     battery_update_os(c);
-    if (c->exist) {
+    if (c->b) {
         if (c->charging) {
             i = batt_charging;
-            if (c->level == 100)
-            g_snprintf(buf, sizeof(buf), _("<b>Battery:</b> %d%%"), (int) c->level);
+            if (c->b->percentage == 100)
+				g_snprintf(buf, sizeof(buf), _("<b>Battery:</b> %d%%"), c->b->percentage);
             else
-                g_snprintf(buf, sizeof(buf), _("<b>Battery:</b> %d%%\n%s %d min."), (int) c->level, _("Be left to full\ncharge:"), ((int)(c->charge_full - c->charge_now) / 60));
+                g_snprintf(buf, sizeof(buf), _("<b>Battery:</b> %d%%\n%s %d min."), c->b->percentage, _("Be left to full\ncharge:"), c->b->seconds / 60);
         }
         else {
             i = batt_working;
-            g_snprintf(buf, sizeof(buf), _("<b>Battery:</b> %d%%\n%s %d min."), (int) c->level, _("Be left to full\ndischarge:"), ((int)c->charge_now / 60));
+            g_snprintf(buf, sizeof(buf), _("<b>Battery:</b> %d%%\n%s %d min."), c->b->percentage, _("Be left to full\ndischarge:"), ((int)c->b->seconds / 60));
         }
         gtk_widget_set_tooltip_markup(((plugin_instance *)c)->pwid, buf);
         k->set_icons(&c->meter, i);
-        k->set_level(&c->meter, c->level);
-        if ((c->level <= c->low_limit_notify) && !c->notify_sended && !c->charging) {
-            send_notify(g_strdup_printf(_("Battery running low. The system will be \n terminated in %d minutes"), (int) (c->charge_full/100 * (c->low_limit_notify - c->low_limit) / 60)));
+        k->set_level(&c->meter, c->b->percentage);
+        if ((c->b->percentage <= c->low_limit_notify) && !c->notify_sended && !c->charging) {
+            send_notify(g_strdup_printf(_("Battery running low. The system will be \n terminated in %d minutes"), c->b->seconds / 60));
             c->notify_sended = TRUE;
         }
-        if ((c->level <= c->low_limit) && !c->charging) {
+        if ((c->b->percentage <= c->low_limit) && !c->charging) {
             DBG("battery: %s\n", commands_shutdown[c->type_shutdown]);
             run_app(commands_shutdown[c->type_shutdown]);
         }
@@ -132,7 +123,7 @@ battery_update(battery_priv *c)
             i = batt_na;
             gtk_widget_set_tooltip_markup(((plugin_instance *)c)->pwid, _("Running on AC\nNo battery found"));
             k->set_icons(&c->meter, i);
-            k->set_level(&c->meter, c->level);
+            k->set_level(&c->meter, c->b->percentage);
         }
         else
             RET(FALSE);
@@ -159,6 +150,7 @@ battery_constructor(plugin_instance *p)
     c->low_limit_notify = 5;
     c->notify_sended = FALSE;
     c->type_shutdown = 0;
+    c->b = battery_get();
     XCG(p->xc, "showiconinac", &c->show_icon_in_ac, enum, bool_enum);
     XCG(p->xc, "lowlimit", &c->low_limit, int);
     XCG(p->xc, "lowlimitnotify", &c->low_limit_notify, int);
@@ -167,8 +159,8 @@ battery_constructor(plugin_instance *p)
         c->low_limit_notify = c->low_limit + 3;
     }
     DBG("ShowIconInAC=%s, LowLimit=%d, LowLimitNotify=%d, TypeShutdown=%s\n", (c->show_icon_in_ac) ? "True" : "False", c->low_limit, c->low_limit_notify, commands_shutdown[c->type_shutdown]);
-    c->timer = g_timeout_add(2000, (GSourceFunc) battery_update, c);
-    battery_update(c);
+    c->timer = g_timeout_add(2000, (GSourceFunc) battery_manage, c);
+    battery_manage(c);
     RET(1);
 }
 
