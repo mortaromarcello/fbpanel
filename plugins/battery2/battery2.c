@@ -88,7 +88,7 @@ send_notify(const gchar *message)
 }
 
 static gboolean
-battery_manage(battery_priv *c)
+battery_callback(battery_priv *c)
 {
     gchar buf[60];
     gchar **i;
@@ -159,8 +159,8 @@ battery_constructor(plugin_instance *p)
         c->low_limit_notify = c->low_limit + 3;
     }
     DBG("ShowIconInAC=%s, LowLimit=%d, LowLimitNotify=%d, TypeShutdown=%s\n", (c->show_icon_in_ac) ? "True" : "False", c->low_limit, c->low_limit_notify, commands_shutdown[c->type_shutdown]);
-    c->timer = g_timeout_add(2000, (GSourceFunc) battery_manage, c);
-    battery_manage(c);
+    c->timer = g_timeout_add(2000, (GSourceFunc) battery_callback, c);
+    battery_callback(c);
     RET(1);
 }
 
