@@ -33,8 +33,6 @@ typedef struct {
     snd_mixer_t* handle;
     snd_mixer_elem_t* elem;
     snd_mixer_selem_id_t* sid;
-    long min, max;
-    int step;
     gchar *mixer;
     guchar vol, muted_vol;
     int update_id, leave_id;
@@ -50,17 +48,54 @@ static void slider_changed(GtkRange *range, volume_priv *c);
 static gboolean crossed(GtkWidget *widget, GdkEventCrossing *event,
     volume_priv *c);
 
+static gboolean asound_find_element(volume_priv * vol, const char * ename)
+{
+    for (
+      vol->elem = snd_mixer_first_elem(vol->handle);
+      vol->elem != NULL;
+      vol->elem = snd_mixer_elem_next(vol->elem))
+    {
+        snd_mixer_selem_get_id(vol->elem, vol->sid);
+        if ((snd_mixer_selem_is_active(vol->elem))
+        && (strcmp(ename, snd_mixer_selem_id_get_name(vol->sid)) == 0))
+            return TRUE;
+    }
+    return FALSE;
+}
+
+/* Initialize the ALSA interface. */
+static gboolean asound_initialize(volume_priv * vol)
+{
+    /* Access the "default" device. */
+    snd_mixer_selem_id_alloca(&vol->sid);
+    snd_mixer_open(&vol->handle, 0);
+    snd_mixer_attach(vol->handle, "default");
+    snd_mixer_selem_register(vol->handle, NULL, NULL);
+    snd_mixer_load(vol->handle);
+
+    /* Find Master element, or Front element, or PCM element, or LineOut element.
+     * If one of these succeeds, master_element is valid. */
+    if ( ! asound_find_element(vol, "Master"))
+        if ( ! asound_find_element(vol, "Front"))
+            if ( ! asound_find_element(vol, "PCM"))
+                if ( ! asound_find_element(vol, "LineOut"))
+                    return FALSE;
+
+    /* Set the playback volume range as we wish it. */
+    snd_mixer_selem_set_playback_volume_range(vol->elem, 0, 100);
+    return TRUE;
+}
+
 static int
 get_volume(volume_priv *c)
 {
-    long volume, temp;
+    long volume;
     ENTER;
     if (snd_mixer_selem_get_playback_volume(c->elem, 0, &volume) < 0) {
-        ERR("volume: can't get volume\n");
+        DBG("volume2: can't get volume\n");
         RET(0);
     }
-    volume = (c->step > 0) ? volume / c->step : 0;
-    DBG("volume=%d\n", volume);
+    DBG("volume=%d\n", (int) volume);
     RET(volume);
 }
 
@@ -68,13 +103,10 @@ static void
 set_volume(volume_priv *c, long volume)
 {
     ENTER;
-    DBG("volume=%d\n", volume);
-    volume = volume * c->step;
+    DBG("volume=%d\n", (int) volume);
     if (snd_mixer_selem_set_playback_volume_all(c->elem, volume) < 0) {
-        ERR("volume: don't set volume\n");
-        RET(0);
+        DBG("volume2: don't set volume\n");
     }
-    RET();
 }
 
 static gboolean
@@ -256,10 +288,7 @@ static int
 volume_constructor(plugin_instance *p)
 {
     volume_priv *c;
-    static const char* mix_name = "Master";
-    static const char* card = "default";
-    static int mix_index = 0;
-    int ret = 0;
+    
     if (!(k = class_get("meter")))
         RET(0);
     if (!PLUGIN_CLASS(k)->constructor(p))
@@ -267,35 +296,10 @@ volume_constructor(plugin_instance *p)
     c = (volume_priv *) p;
     XCG(p->xc, "mixer", &c->mixer, str);
     DBG("mixer=%s\n", c->mixer);
-    snd_mixer_selem_id_alloca(&c->sid);
-    // sets simple-mixer index and name
-    snd_mixer_selem_id_set_index(c->sid, mix_index);
-    snd_mixer_selem_id_set_name(c->sid, mix_name);
-    if ((snd_mixer_open(&c->handle, 0)) < 0) {
-        ERR("volume2: don't open mixer\n");
+    if (! asound_initialize(c)) {
+        ERR("volume2:Not initialize sound card\n");
         RET(0);
     }
-    if ((snd_mixer_attach(c->handle, card)) < 0) {
-        ERR("volume2: don't attach card\n");
-        RET(0);
-    }
-    if ((snd_mixer_selem_register(c->handle, NULL, NULL)) < 0) {
-        ERR("volume2: don't register\n");
-        RET(0);
-    }
-    ret = snd_mixer_load(c->handle);
-    if (ret < 0) {
-        ERR("volume2: don't load mixer\n");
-        RET(0);
-    }
-    c->elem = snd_mixer_find_selem(c->handle, c->sid);
-    if (!c->elem) {
-        ERR("volume2: don't find element\n");
-        RET(0);
-    }
-    snd_mixer_selem_get_playback_volume_range(c->elem, &c->min, &c->max);
-    c->step = (int)(c->max / 100);
-    //
     k->set_icons(&c->meter, names);
     c->update_id = g_timeout_add(1000, (GSourceFunc) volume_update_gui, c);
     c->vol = 200;
