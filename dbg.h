@@ -1,5 +1,7 @@
 #include <stdio.h>
 
+#define DEBUGPRN
+
 #define ERR(fmt, args...) fprintf(stderr, fmt, ## args)
 #define DBG2(fmt, args...) fprintf(stderr, "%s:%s:%-5d: " fmt, __FILE__,  __FUNCTION__, __LINE__, ## args)
 #define DBGE2(fmt, args...)       fprintf(stderr, fmt, ## args)

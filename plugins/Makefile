@@ -2,7 +2,8 @@
 
 TOPDIR := ..
 
-SUBDIRS := battery \
+SUBDIRS := backlight \
+    battery \
     battery2 \
     chart \
     cpu \
