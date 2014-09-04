@@ -10,31 +10,31 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-
+#include <X11/Xlib.h>
+#include <X11/extensions/xf86vmode.h>
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
 #include "dbg.h"
 
-#define BACKLIGHT_SYSFS_LOCATION    "/sys/class/backlight"
-#define BRIGHTNESS_SWITCH_LOCATION  "/sys/module/video/parameters/brightness_switch_enabled"
-
 static gchar *names[] = {
-//  "display-brightness",
-    "stock_volume-min",
+    //"display-brightness",
+    //"stock_volume-min",
+    "brightness_icon",
     NULL
 };
 
-static gchar *s_names[] = {
-    "stock_volume-mute",
-    NULL
-};
+//static gchar *s_names[] = {
+//    "stock_volume-mute",
+//    NULL
+//};
   
 typedef struct {
     meter_priv meter;
-    gchar *backlight_brightness;
-    gchar *backlight_max_brightness;
-    gint brightness, max_brightness, muted_bright;
+    XF86VidModeGamma gamma;
     int update_id, leave_id;
     int has_pointer;
-    gboolean muted;
     GtkWidget *slider_window;
     GtkWidget *slider;
 } backlight_priv;
@@ -44,186 +44,77 @@ static meter_class *k;
 static void slider_changed(GtkRange *range, backlight_priv *c);
 static gboolean crossed(GtkWidget *widget, GdkEventCrossing *event, backlight_priv *c);
 
-/*
- * Find best backlight using an ordered interface list
- */
-static gchar *
-backlight_get_best_backlight (void)
-{
-    gchar *filename;
-    guint i;
-    gboolean ret;
-    GDir *dir = NULL;
-    GError *error = NULL;
-    const gchar *first_device;
-
-    /* available kernel interfaces in priority order */
-    static const gchar *backlight_interfaces[] = {
-        "nv_backlight",
-        "asus_laptop",
-        "toshiba",
-        "eeepc",
-        "thinkpad_screen",
-        "intel_backlight",
-        "acpi_video1",
-        "mbp_backlight",
-        "acpi_video0",
-        "fujitsu-laptop",
-        "sony",
-        "samsung",
-        NULL,
-    };
-
-    /* search each one */
-    for (i=0; backlight_interfaces[i] != NULL; i++) {
-        filename = g_build_filename (BACKLIGHT_SYSFS_LOCATION,
-                         backlight_interfaces[i], NULL);
-        ret = g_file_test (filename, G_FILE_TEST_EXISTS);
-        if (ret)
-            goto out;
-        g_free (filename);
-    }
-
-    /* nothing found in the ordered list */
-    filename = NULL;
-
-    /* find any random ones */
-    dir = g_dir_open (BACKLIGHT_SYSFS_LOCATION, 0, &error);
-    if (dir == NULL) {
-        g_warning ("failed to find any devices: %s", error->message);
-        g_error_free (error);
-        goto out;
-    }
-
-    /* get first device if any */
-    first_device = g_dir_read_name (dir);
-    if (first_device != NULL) {
-        filename = g_build_filename (BACKLIGHT_SYSFS_LOCATION,
-                         first_device, NULL);
-    }
-out:
-    if (dir != NULL)
-        g_dir_close (dir);
-    return filename;
-}
-
-/*
 static gboolean
-backlight_write (const gchar *filename, gint value, GError **error)
+get_gamma(backlight_priv *c)
 {
-    gchar *text = NULL;
-    gint retval;
-    gint length;
-    gint fd = -1;
-    gboolean ret = TRUE;
-
-    fd = open (filename, O_WRONLY);
-    if (fd < 0) {
-        ret = FALSE;
-        g_set_error (error, 1, 0, "failed to open filename: %s", filename);
-        goto out;
-    }
-
-    // convert to text
-    text = g_strdup_printf ("%i", value);
-    length = strlen (text);
-
-    // write to device file
-    retval = write (fd, text, length);
-    if (retval != length) {
-        ret = FALSE;
-        g_set_error (error, 1, 0, "writing '%s' to %s failed", text, filename);
-        goto out;
-    }
-out:
-    if (fd >= 0)
-        close (fd);
-    g_free (text);
-    return ret;
-}
-*/
-
-static gboolean
-backlight_write(const gchar *filename, const gchar *value)
-{
-    return g_file_set_contents(filename, value, -1, NULL);
-}
-
-static gchar *
-backlight_read(const gchar *filename)
-{
-    char *buf = NULL;
-    gchar *value = NULL;
-    if (g_file_get_contents(filename, &buf, NULL, NULL) == TRUE) {
-        value = g_strdup( buf );
-        value = g_strstrip( value );
-        g_free( buf );
-    }
-    return value;
-}
-
-static gint
-get_brightness(backlight_priv *c)
-{
-    gint brightness = -1;
-    gchar *value = NULL;
+    Display *display;
+    int screen;
+    int major, minor;
     ENTER;
-    if ((value = backlight_read(c->backlight_brightness)) == NULL) {
-        DBG("backlight: can't get brightness.\n");
+    display = XOpenDisplay(NULL);
+    if (!display) RET(0);
+    screen = DefaultScreen(display);
+    if (!XF86VidModeQueryVersion(display, &major, &minor)
+            || major < 2 || major == 2 && minor < 0
+            || !XF86VidModeGetGamma(display, screen, &c->gamma)) {
+        XCloseDisplay(display);
+        DBG("backlight: can't get gamma.\n");
         RET(0);
     }
-    brightness = g_ascii_strtoll(value, NULL, 0);
-    DBG("backlight: brightness=%d\n", brightness);
-    RET(brightness);
-}
-
-static gint
-get_max_brightness(backlight_priv *c)
-{
-    gint max_brightness = -1;
-    gchar *value = NULL;
-    ENTER;
-    if ((value = backlight_read(c->backlight_max_brightness)) == NULL) {
-        DBG("backlight: can't get max_brightness.\n");
-        RET(0);
-    }
-    max_brightness = g_ascii_strtoll(value, NULL, 0);
-    DBG("backlight: max_brightness=%d\n", max_brightness);
-    RET(max_brightness);
+    DBG("backlight: gamma.red=%f, gamma.green=%f, gamma.blue=%f\n", c->gamma.red, c->gamma.green, c->gamma.blue);
+    RET(1);
 }
 
 static void
-set_brightness(backlight_priv *c, gint brightness)
+set_gamma(backlight_priv *c, gfloat brightness)
 {
-    gchar *value = NULL;
+    XF86VidModeGamma gamma;
+    Display *display;
+    int screen, major, minor;
     ENTER;
-    DBG("backlight: brightness=%d\n", brightness);
-    value = g_strdup_printf("%i", brightness);
-    if (backlight_write(c->backlight_brightness, value) != TRUE) {
-        DBG("backlight: don't set brightness.\n");
+    DBG("backlight: brightness=%f\n", brightness);
+    display = XOpenDisplay(NULL);
+    if (!display)
+        return;
+    if (!XF86VidModeQueryVersion(display, &major, &minor)
+            || major < 2 || major == 2 && minor < 0) {
+        XCloseDisplay(display);
+        return;
     }
+    gamma.red = brightness;
+    gamma.green = gamma.red;
+    gamma.blue = gamma.red;
+    
+    screen = DefaultScreen(display);
+    if (!XF86VidModeSetGamma(display, screen, &gamma)) {
+        XF86VidModeSetGamma(display, screen, &c->gamma);
+        XF86VidModeGetGamma(display, screen, &c->gamma);
+        XCloseDisplay(display);
+        return;
+    }
+    if (!XF86VidModeGetGamma(display, screen, &gamma)) {
+        XF86VidModeSetGamma(display, screen, &c->gamma);
+        XF86VidModeGetGamma(display, screen, &c->gamma);
+        XCloseDisplay(display);
+        return;
+    }
+    DBG("gamma -> %f %f %f\n", gamma.red, gamma.green, gamma.blue);
+    c->gamma.red = gamma.red;
+    c->gamma.green = gamma.green;
+    c->gamma.blue = gamma.blue;
+    XCloseDisplay(display);
 }
 
 static gboolean
 brightness_update_gui(backlight_priv *c)
 {
-    gint brightness;
-    gchar buf[20];
-
+    gfloat brightness;
+    gchar buf[30];
     ENTER;
-    c->brightness = get_brightness(c);
-    c->max_brightness = get_max_brightness(c);
-    brightness = c->brightness / c->max_brightness * 100;
-    if ((brightness != 0) != (c->brightness != 0)) {
-        if (brightness)
-            k->set_icons(&c->meter, names);
-      else
-            k->set_icons(&c->meter, s_names);
-        DBG("setting %s icons\n", brightness ? "normal" : "muted");
-    }
-    //c->brightness = brightness;
+    brightness = c->gamma.red;
+    k->set_icons(&c->meter, names);
     k->set_level(&c->meter, brightness);
-    g_snprintf(buf, sizeof(buf), "<b>Brightness:</b> %d%%", brightness);
+    g_snprintf(buf, sizeof(buf), "<b>Brightness:</b> %f%%", brightness);
     if (!c->slider_window)
         gtk_widget_set_tooltip_markup(((plugin_instance *)c)->pwid, buf);
     else {
@@ -239,11 +130,10 @@ brightness_update_gui(backlight_priv *c)
 static void
 slider_changed(GtkRange *range, backlight_priv *c)
 {
-    int brightness = (int) gtk_range_get_value(range);
+    gfloat brightness = gtk_range_get_value(range);
     ENTER;
-    DBG("value=%d\n", brightness);
-    c->brightness = brightness * c->max_brightness / 100;
-    set_brightness(c, c->brightness);
+    DBG("value=%f\n", brightness);
+    set_gamma(c, brightness);
     brightness_update_gui(c);
     RET();
 }
@@ -268,12 +158,11 @@ brightness_create_slider(backlight_priv *c)
     gtk_frame_set_shadow_type(GTK_FRAME(frame), GTK_SHADOW_ETCHED_IN);
     gtk_container_add(GTK_CONTAINER(win), frame);
     gtk_container_set_border_width(GTK_CONTAINER(frame), 1);
-    
-    slider = gtk_vscale_new_with_range(0.0, 100.0, 1.0);
+    slider = gtk_vscale_new_with_range(0.2, 2.0, 0.1);
     gtk_widget_set_size_request(slider, 25, 82);
     gtk_scale_set_draw_value(GTK_SCALE(slider), TRUE);
     gtk_scale_set_value_pos(GTK_SCALE(slider), GTK_POS_BOTTOM);
-    gtk_scale_set_digits(GTK_SCALE(slider), 0);
+    gtk_scale_set_digits(GTK_SCALE(slider), 2);
     gtk_range_set_inverted(GTK_RANGE(slider), TRUE);
     gtk_range_set_value(GTK_RANGE(slider), ((meter_priv *) c)->level);
     DBG("meter->level %f\n", ((meter_priv *) c)->level);
@@ -292,8 +181,6 @@ brightness_create_slider(backlight_priv *c)
 static gboolean
 icon_clicked(GtkWidget *widget, GdkEventButton *event, backlight_priv *c)
 {
-    int brightness;
-
     ENTER;
     if (event->type == GDK_BUTTON_PRESS && event->button == 1) {
         if (c->slider_window == NULL) {
@@ -310,20 +197,7 @@ icon_clicked(GtkWidget *widget, GdkEventButton *event, backlight_priv *c)
         }
         RET(FALSE);
     }
-    /*
-    if (!(event->type == GDK_BUTTON_PRESS && event->button == 2)) {
-        run_app(c->mixer);
-        RET(FALSE);
-    }
-    */
-    if (c->muted) {
-        brightness = c->muted_bright;
-    } else {
-        c->muted_bright = c->brightness;
-        brightness = 0;
-    }
-    c->muted = !c->muted;
-    set_brightness(c, brightness);
+    
     brightness_update_gui(c);
     RET(FALSE);
 }
@@ -331,24 +205,21 @@ icon_clicked(GtkWidget *widget, GdkEventButton *event, backlight_priv *c)
 static gboolean
 icon_scrolled(GtkWidget *widget, GdkEventScroll *event, backlight_priv *c)
 {
-    int brightness;
+    gfloat brightness;
     
     ENTER;
-    brightness = (c->muted) ? c->muted_bright : ((meter_priv *) c)->level;
-    brightness += 2 * ((event->direction == GDK_SCROLL_UP
-            || event->direction == GDK_SCROLL_LEFT) ? 1 : -1);
+    brightness = ((meter_priv *) c)->level;
+    brightness += ((event->direction == GDK_SCROLL_UP
+            || event->direction == GDK_SCROLL_LEFT) ? 0.1 : -0.1);
     
-    if (brightness > 100)
-        brightness = 100;
-    if (brightness < 0)
-        brightness = 0;
+    if (brightness > 4.0)
+        brightness = 4.0;
+    if (brightness <= 0.2)
+        brightness = 0.2;
     
-	if (c->muted)
-		c->muted_bright = brightness;
-	else {
-    	set_brightness(c, brightness);
-    	brightness_update_gui(c);
-    }
+    set_gamma(c, brightness);
+    brightness_update_gui(c);
+    //}
     RET(TRUE);
 }
 
@@ -389,32 +260,15 @@ static int
 backlight_constructor(plugin_instance *p)
 {
     backlight_priv *c;
-    gchar *backlight;
     if (!(k = class_get("meter")))
         RET(0);
     if (!PLUGIN_CLASS(k)->constructor(p))
         RET(0);
     c = (backlight_priv *) p;
-    backlight = backlight_get_best_backlight();
-    c->backlight_brightness = g_build_filename(backlight, "brightness", NULL);
-    c->backlight_max_brightness = g_build_filename(backlight, "max_brightness", NULL);
-    DBG("backlight: %s\n", c->backlight_brightness);
-    if (c->backlight_brightness != NULL) {
-        c->brightness = get_brightness(c);
-    }
-    if (c->backlight_max_brightness != NULL) {
-        c->max_brightness = get_max_brightness(c);
-    }
-    //XCG(p->xc, "mixer", &c->mixger, str);
-    //DBG("mixer=%s\n", c->mixer);
-    //if (! asound_initialize(c)) {
-    //    ERR("volume2:Not initialize sound card\n");
-    //    RET(0);
-    //}
+    get_gamma(c);
     
     k->set_icons(&c->meter, names);
     c->update_id = g_timeout_add(1000, (GSourceFunc) brightness_update_gui, c);
-    //c->vol = 200;
     brightness_update_gui(c);
     g_signal_connect(G_OBJECT(p->pwid), "scroll-event",
         G_CALLBACK(icon_scrolled), (gpointer) c);
@@ -424,7 +278,6 @@ backlight_constructor(plugin_instance *p)
         G_CALLBACK(crossed), (gpointer)c);
     g_signal_connect(G_OBJECT(p->pwid), "leave-notify-event",
         G_CALLBACK(crossed), (gpointer)c);
-
     RET(1);
 }
 
@@ -439,7 +292,6 @@ backlight_destructor(plugin_instance *p)
         gtk_widget_destroy(c->slider_window);
     PLUGIN_CLASS(k)->destructor(p);
     class_put("meter");
-    //snd_mixer_close(c->handle);
     RET();
 }
 

@@ -22,6 +22,7 @@ battery_charging_6.png \
 battery_charging_7.png \
 battery_charging_8.png \
 battery_na.png \
+brightness_icon.png \
 dclock_glyphs.png            \
 default.xpm                  \
 gnome-session-halt.png       \
