@@ -30,8 +30,8 @@ static gchar *names[] = {
 typedef struct {
     meter_priv meter;
     XF86VidModeGamma gamma;
-    int update_id, leave_id;
-    int has_pointer;
+    gint update_id, leave_id;
+    gint has_pointer;
     GtkWidget *slider_window;
     GtkWidget *slider;
 } backlight_priv;
@@ -40,12 +40,24 @@ static meter_class *k;
 
 static void slider_changed(GtkRange *range, backlight_priv *c);
 
+static gfloat
+perc2f(gint value, gfloat max)
+{
+    return (((gfloat) value) * max / 100);
+}
+
+static gint
+f2perc(gfloat value, gfloat max)
+{
+    return (gint) (value * 100 / max);
+}
+
 static gboolean
 get_gamma(backlight_priv *c)
 {
     Display *display;
-    int screen;
-    int major, minor;
+    gint screen;
+    gint major, minor;
     ENTER;
     display = XOpenDisplay(NULL);
     if (!display) RET(0);
@@ -66,7 +78,7 @@ set_gamma(backlight_priv *c, gfloat brightness)
 {
     XF86VidModeGamma gamma;
     Display *display;
-    int screen, major, minor;
+    gint screen, major, minor;
     ENTER;
     DBG("backlight: brightness=%f\n", brightness);
     display = XOpenDisplay(NULL);
@@ -108,7 +120,8 @@ brightness_update_gui(backlight_priv *c)
     gchar buf[30];
     ENTER;
     brightness = c->gamma.red;
-    k->set_level(&c->meter, (int) (brightness * 100 / BRIGHTNESS_MAX));
+    k->set_level(&c->meter, f2perc(brightness, BRIGHTNESS_MAX));
+    //k->set_level(&c->meter, (gint) (brightness * 100 / BRIGHTNESS_MAX));
     DBG("meter.level:%f\n", ((meter_priv *) c)->level);
     g_snprintf(buf, sizeof(buf), "<b>Brightness:</b> %-.2f%%", brightness);
     if (!c->slider_window)
@@ -160,7 +173,7 @@ brightness_create_slider(backlight_priv *c)
     gtk_scale_set_value_pos(GTK_SCALE(slider), GTK_POS_BOTTOM);
     gtk_scale_set_digits(GTK_SCALE(slider), 2);
     gtk_range_set_inverted(GTK_RANGE(slider), TRUE);
-    gtk_range_set_value(GTK_RANGE(slider), ((meter_priv *) c)->level);
+    gtk_range_set_value(GTK_RANGE(slider), perc2f(((meter_priv *) c)->level, BRIGHTNESS_MAX));
     DBG("meter->level %f\n", ((meter_priv *) c)->level);
     g_signal_connect(G_OBJECT(slider), "value_changed", G_CALLBACK(slider_changed), c);
     gtk_container_add(GTK_CONTAINER(frame), slider);
@@ -199,10 +212,11 @@ icon_scrolled(GtkWidget *widget, GdkEventScroll *event, backlight_priv *c)
     gfloat brightness;
     
     ENTER;
-    brightness = ((gfloat)((meter_priv *) c)->level) * BRIGHTNESS_MAX/100;
+    brightness = perc2f(((meter_priv *) c)->level, BRIGHTNESS_MAX);
+    //brightness = ((gfloat)((meter_priv *) c)->level) * BRIGHTNESS_MAX/100;
     DBG("icon_scrolled: c->level=%f\n", ((meter_priv*)c)->level);
     brightness += ((event->direction == GDK_SCROLL_UP
-            || event->direction == GDK_SCROLL_LEFT) ? 0.1 : -0.1);
+            || event->direction == GDK_SCROLL_LEFT) ? BRIGHTNESS_STEP : -BRIGHTNESS_STEP);
     
     if (brightness > BRIGHTNESS_MAX)
         brightness = BRIGHTNESS_MAX;
@@ -214,7 +228,7 @@ icon_scrolled(GtkWidget *widget, GdkEventScroll *event, backlight_priv *c)
     RET(TRUE);
 }
 
-static int
+static gint
 backlight_constructor(plugin_instance *p)
 {
     backlight_priv *c;
