@@ -119,6 +119,7 @@ brightness_update_gui(backlight_priv *c)
     gfloat brightness;
     gchar buf[30];
     ENTER;
+    get_gamma(c);
     brightness = c->gamma.red;
     k->set_level(&c->meter, f2perc(brightness, BRIGHTNESS_MAX));
     //k->set_level(&c->meter, (gint) (brightness * 100 / BRIGHTNESS_MAX));
