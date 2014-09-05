@@ -18,18 +18,15 @@
 #include <unistd.h>
 #include "dbg.h"
 
+#define BRIGHTNESS_MAX  2.0
+#define BRIGHTNESS_MIN  0.2
+#define BRIGHTNESS_STEP 0.1
+
 static gchar *names[] = {
-    //"display-brightness",
-    //"stock_volume-min",
     "brightness_icon",
     NULL
 };
 
-//static gchar *s_names[] = {
-//    "stock_volume-mute",
-//    NULL
-//};
-  
 typedef struct {
     meter_priv meter;
     XF86VidModeGamma gamma;
@@ -42,7 +39,6 @@ typedef struct {
 static meter_class *k;
 
 static void slider_changed(GtkRange *range, backlight_priv *c);
-static gboolean crossed(GtkWidget *widget, GdkEventCrossing *event, backlight_priv *c);
 
 static gboolean
 get_gamma(backlight_priv *c)
@@ -55,7 +51,7 @@ get_gamma(backlight_priv *c)
     if (!display) RET(0);
     screen = DefaultScreen(display);
     if (!XF86VidModeQueryVersion(display, &major, &minor)
-            || major < 2 || major == 2 && minor < 0
+            || major < 2 || (major == 2 && minor < 0)
             || !XF86VidModeGetGamma(display, screen, &c->gamma)) {
         XCloseDisplay(display);
         DBG("backlight: can't get gamma.\n");
@@ -77,7 +73,7 @@ set_gamma(backlight_priv *c, gfloat brightness)
     if (!display)
         return;
     if (!XF86VidModeQueryVersion(display, &major, &minor)
-            || major < 2 || major == 2 && minor < 0) {
+            || major < 2 || (major == 2 && minor < 0)) {
         XCloseDisplay(display);
         return;
     }
@@ -112,9 +108,9 @@ brightness_update_gui(backlight_priv *c)
     gchar buf[30];
     ENTER;
     brightness = c->gamma.red;
-    k->set_icons(&c->meter, names);
-    k->set_level(&c->meter, brightness);
-    g_snprintf(buf, sizeof(buf), "<b>Brightness:</b> %f%%", brightness);
+    k->set_level(&c->meter, (int) (brightness * 100 / BRIGHTNESS_MAX));
+    DBG("meter.level:%f\n", ((meter_priv *) c)->level);
+    g_snprintf(buf, sizeof(buf), "<b>Brightness:</b> %-.2f%%", brightness);
     if (!c->slider_window)
         gtk_widget_set_tooltip_markup(((plugin_instance *)c)->pwid, buf);
     else {
@@ -153,12 +149,12 @@ brightness_create_slider(backlight_priv *c)
     gtk_window_set_skip_pager_hint(GTK_WINDOW(win), TRUE);
     gtk_window_set_position(GTK_WINDOW(win), GTK_WIN_POS_MOUSE);
     gtk_window_stick(GTK_WINDOW(win));
-
+    
     frame = gtk_frame_new(NULL);
     gtk_frame_set_shadow_type(GTK_FRAME(frame), GTK_SHADOW_ETCHED_IN);
     gtk_container_add(GTK_CONTAINER(win), frame);
     gtk_container_set_border_width(GTK_CONTAINER(frame), 1);
-    slider = gtk_vscale_new_with_range(0.2, 2.0, 0.1);
+    slider = gtk_vscale_new_with_range(BRIGHTNESS_MIN, BRIGHTNESS_MAX, BRIGHTNESS_STEP);
     gtk_widget_set_size_request(slider, 25, 82);
     gtk_scale_set_draw_value(GTK_SCALE(slider), TRUE);
     gtk_scale_set_value_pos(GTK_SCALE(slider), GTK_POS_BOTTOM);
@@ -166,12 +162,7 @@ brightness_create_slider(backlight_priv *c)
     gtk_range_set_inverted(GTK_RANGE(slider), TRUE);
     gtk_range_set_value(GTK_RANGE(slider), ((meter_priv *) c)->level);
     DBG("meter->level %f\n", ((meter_priv *) c)->level);
-    g_signal_connect(G_OBJECT(slider), "value_changed",
-        G_CALLBACK(slider_changed), c);
-    g_signal_connect(G_OBJECT(slider), "enter-notify-event",
-        G_CALLBACK(crossed), (gpointer)c);
-    g_signal_connect(G_OBJECT(slider), "leave-notify-event",
-        G_CALLBACK(crossed), (gpointer)c);
+    g_signal_connect(G_OBJECT(slider), "value_changed", G_CALLBACK(slider_changed), c);
     gtk_container_add(GTK_CONTAINER(frame), slider);
     
     c->slider = slider;
@@ -208,52 +199,19 @@ icon_scrolled(GtkWidget *widget, GdkEventScroll *event, backlight_priv *c)
     gfloat brightness;
     
     ENTER;
-    brightness = ((meter_priv *) c)->level;
+    brightness = ((gfloat)((meter_priv *) c)->level) * BRIGHTNESS_MAX/100;
+    DBG("icon_scrolled: c->level=%f\n", ((meter_priv*)c)->level);
     brightness += ((event->direction == GDK_SCROLL_UP
             || event->direction == GDK_SCROLL_LEFT) ? 0.1 : -0.1);
     
-    if (brightness > 4.0)
-        brightness = 4.0;
-    if (brightness <= 0.2)
-        brightness = 0.2;
+    if (brightness > BRIGHTNESS_MAX)
+        brightness = BRIGHTNESS_MAX;
+    if (brightness <= BRIGHTNESS_MIN)
+        brightness = BRIGHTNESS_MIN;
     
     set_gamma(c, brightness);
     brightness_update_gui(c);
-    //}
     RET(TRUE);
-}
-
-static gboolean
-leave_cb(backlight_priv *c)
-{
-    ENTER;
-    c->leave_id = 0;
-    c->has_pointer = 0;
-    gtk_widget_destroy(c->slider_window);
-    c->slider_window = NULL;
-    RET(FALSE);
-}
-
-static gboolean
-crossed(GtkWidget *widget, GdkEventCrossing *event, backlight_priv *c)
-{
-    ENTER;
-    if (event->type == GDK_ENTER_NOTIFY)
-        c->has_pointer++;
-    else
-        c->has_pointer--;
-    if (c->has_pointer > 0) {
-        if (c->leave_id) {
-            g_source_remove(c->leave_id);
-            c->leave_id = 0;
-        }
-    } else {
-        if (!c->leave_id && c->slider_window) {
-            c->leave_id = g_timeout_add(1200, (GSourceFunc) leave_cb, c);
-        }
-    }
-    DBG("has_pointer=%d\n", c->has_pointer);
-    RET(FALSE);
 }
 
 static int
@@ -272,12 +230,7 @@ backlight_constructor(plugin_instance *p)
     brightness_update_gui(c);
     g_signal_connect(G_OBJECT(p->pwid), "scroll-event",
         G_CALLBACK(icon_scrolled), (gpointer) c);
-    g_signal_connect(G_OBJECT(p->pwid), "button_press_event",
-        G_CALLBACK(icon_clicked), (gpointer)c);
-    g_signal_connect(G_OBJECT(p->pwid), "enter-notify-event",
-        G_CALLBACK(crossed), (gpointer)c);
-    g_signal_connect(G_OBJECT(p->pwid), "leave-notify-event",
-        G_CALLBACK(crossed), (gpointer)c);
+    g_signal_connect(G_OBJECT(p->pwid), "button_press_event", G_CALLBACK(icon_clicked), (gpointer)c);
     RET(1);
 }
 
