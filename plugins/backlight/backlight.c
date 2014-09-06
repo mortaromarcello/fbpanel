@@ -81,7 +81,6 @@ set_gamma(backlight_priv *c, gfloat brightness)
     Display *display;
     gint screen, major, minor;
     ENTER;
-    DBG("backlight: brightness=%f\n", brightness);
     display = XOpenDisplay(NULL);
     if (!display)
         return;
@@ -108,7 +107,6 @@ set_gamma(backlight_priv *c, gfloat brightness)
         return;
     }
     XCloseDisplay(display);
-    DBG("gamma -> %f %f %f\n", gamma.red, gamma.green, gamma.blue);
     c->gamma.red = gamma.red;
     c->gamma.green = gamma.green;
     c->gamma.blue = gamma.blue;
@@ -123,8 +121,6 @@ brightness_update_gui(backlight_priv *c)
     get_gamma(c);
     brightness = c->gamma.red;
     k->set_level(&c->meter, f2perc(brightness, BRIGHTNESS_MAX));
-    //k->set_level(&c->meter, (gint) (brightness * 100 / BRIGHTNESS_MAX));
-    DBG("meter.level:%f\n", ((meter_priv *) c)->level);
     g_snprintf(buf, sizeof(buf), "<b>Brightness:</b> %-.2f%%", brightness);
     if (!c->slider_window)
         gtk_widget_set_tooltip_markup(((plugin_instance *)c)->pwid, buf);
@@ -143,7 +139,6 @@ slider_changed(GtkRange *range, backlight_priv *c)
 {
     gfloat brightness = gtk_range_get_value(range);
     ENTER;
-    DBG("value=%f\n", brightness);
     set_gamma(c, brightness);
     brightness_update_gui(c);
     RET();
@@ -154,7 +149,6 @@ brightness_create_slider(backlight_priv *c)
 {
     GtkWidget *slider, *win;
     GtkWidget *frame;
-    
     win = gtk_window_new(GTK_WINDOW_TOPLEVEL);
     gtk_window_set_default_size(GTK_WINDOW(win), 180, 180);
     gtk_window_set_decorated(GTK_WINDOW(win), FALSE);
@@ -164,7 +158,6 @@ brightness_create_slider(backlight_priv *c)
     gtk_window_set_skip_pager_hint(GTK_WINDOW(win), TRUE);
     gtk_window_set_position(GTK_WINDOW(win), GTK_WIN_POS_MOUSE);
     gtk_window_stick(GTK_WINDOW(win));
-    
     frame = gtk_frame_new(NULL);
     gtk_frame_set_shadow_type(GTK_FRAME(frame), GTK_SHADOW_ETCHED_IN);
     gtk_container_add(GTK_CONTAINER(win), frame);
@@ -176,10 +169,8 @@ brightness_create_slider(backlight_priv *c)
     gtk_scale_set_digits(GTK_SCALE(slider), 2);
     gtk_range_set_inverted(GTK_RANGE(slider), TRUE);
     gtk_range_set_value(GTK_RANGE(slider), perc2f(((meter_priv *) c)->level, BRIGHTNESS_MAX));
-    DBG("meter->level %f\n", ((meter_priv *) c)->level);
     g_signal_connect(G_OBJECT(slider), "value_changed", G_CALLBACK(slider_changed), c);
     gtk_container_add(GTK_CONTAINER(frame), slider);
-    
     c->slider = slider;
     return win;
 }  
@@ -215,16 +206,12 @@ icon_scrolled(GtkWidget *widget, GdkEventScroll *event, backlight_priv *c)
     
     ENTER;
     brightness = perc2f(((meter_priv *) c)->level, BRIGHTNESS_MAX);
-    //brightness = ((gfloat)((meter_priv *) c)->level) * BRIGHTNESS_MAX/100;
-    DBG("icon_scrolled: c->level=%f\n", ((meter_priv*)c)->level);
     brightness += ((event->direction == GDK_SCROLL_UP
             || event->direction == GDK_SCROLL_LEFT) ? BRIGHTNESS_STEP : -BRIGHTNESS_STEP);
-    
     if (brightness > BRIGHTNESS_MAX)
         brightness = BRIGHTNESS_MAX;
     if (brightness <= BRIGHTNESS_MIN)
         brightness = BRIGHTNESS_MIN;
-    
     set_gamma(c, brightness);
     brightness_update_gui(c);
     RET(TRUE);
@@ -234,6 +221,7 @@ static gint
 backlight_constructor(plugin_instance *p)
 {
     backlight_priv *c;
+    ENTER;
     if (!(k = class_get("meter")))
         RET(0);
     if (!PLUGIN_CLASS(k)->constructor(p))
@@ -261,8 +249,6 @@ backlight_destructor(plugin_instance *p)
     class_put("meter");
     RET();
 }
-
-
 
 static plugin_class class = {
     .count       = 0,
