@@ -168,7 +168,7 @@ brightness_create_slider(backlight_priv *c)
     gtk_scale_set_value_pos(GTK_SCALE(slider), GTK_POS_BOTTOM);
     gtk_scale_set_digits(GTK_SCALE(slider), 2);
     gtk_range_set_inverted(GTK_RANGE(slider), TRUE);
-    gtk_range_set_value(GTK_RANGE(slider), perc2f(((meter_priv *) c)->level, BRIGHTNESS_MAX));
+    gtk_range_set_value(GTK_RANGE(slider), c->gamma.red);
     g_signal_connect(G_OBJECT(slider), "value_changed", G_CALLBACK(slider_changed), c);
     gtk_container_add(GTK_CONTAINER(frame), slider);
     c->slider = slider;
