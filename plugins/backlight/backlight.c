@@ -49,7 +49,7 @@ perc2f(gint value, gfloat max)
 static gint
 f2perc(gfloat value, gfloat max)
 {
-    return (gint) (value * 100 / max);
+    return (gint) (value * 100 / max)+((fmodf(value*100, max) > 0.5) ? 1 : 0);
 }
 
 static gboolean
@@ -69,6 +69,7 @@ get_gamma(backlight_priv *c)
         DBG("backlight: can't get gamma.\n");
         RET(0);
     }
+    XCloseDisplay(display);
     DBG("backlight: gamma.red=%f, gamma.green=%f, gamma.blue=%f\n", c->gamma.red, c->gamma.green, c->gamma.blue);
     RET(1);
 }
@@ -106,11 +107,11 @@ set_gamma(backlight_priv *c, gfloat brightness)
         XCloseDisplay(display);
         return;
     }
+    XCloseDisplay(display);
     DBG("gamma -> %f %f %f\n", gamma.red, gamma.green, gamma.blue);
     c->gamma.red = gamma.red;
     c->gamma.green = gamma.green;
     c->gamma.blue = gamma.blue;
-    XCloseDisplay(display);
 }
 
 static gboolean
@@ -239,7 +240,6 @@ backlight_constructor(plugin_instance *p)
         RET(0);
     c = (backlight_priv *) p;
     get_gamma(c);
-    
     k->set_icons(&c->meter, names);
     c->update_id = g_timeout_add(1000, (GSourceFunc) brightness_update_gui, c);
     brightness_update_gui(c);
@@ -253,7 +253,6 @@ static void
 backlight_destructor(plugin_instance *p)
 {
     backlight_priv *c = (backlight_priv *) p;
-    
     ENTER;
     g_source_remove(c->update_id);
     if (c->slider_window)
