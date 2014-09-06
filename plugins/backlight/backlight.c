@@ -5,7 +5,6 @@
 
 #include "misc.h"
 #include "../meter/meter.h"
-//#include "run.h"
 #include <sys/ioctl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -29,6 +28,8 @@ static gchar *names[] = {
 
 typedef struct {
     meter_priv meter;
+    Display * display;
+    gint screen;
     XF86VidModeGamma gamma;
     gint update_id, leave_id;
     gint has_pointer;
@@ -55,21 +56,13 @@ f2perc(gfloat value, gfloat max)
 static gboolean
 get_gamma(backlight_priv *c)
 {
-    Display *display;
-    gint screen;
-    gint major, minor;
     ENTER;
-    display = XOpenDisplay(NULL);
-    if (!display) RET(0);
-    screen = DefaultScreen(display);
-    if (!XF86VidModeQueryVersion(display, &major, &minor)
-            || major < 2 || (major == 2 && minor < 0)
-            || !XF86VidModeGetGamma(display, screen, &c->gamma)) {
-        XCloseDisplay(display);
+    if (!c->display)
+        RET(0);
+    if (!XF86VidModeGetGamma(c->display, c->screen, &c->gamma)) {
         DBG("backlight: can't get gamma.\n");
         RET(0);
     }
-    XCloseDisplay(display);
     DBG("backlight: gamma.red=%f, gamma.green=%f, gamma.blue=%f\n", c->gamma.red, c->gamma.green, c->gamma.blue);
     RET(1);
 }
@@ -77,39 +70,18 @@ get_gamma(backlight_priv *c)
 static void
 set_gamma(backlight_priv *c, gfloat brightness)
 {
-    XF86VidModeGamma gamma;
-    Display *display;
-    gint screen, major, minor;
     ENTER;
-    display = XOpenDisplay(NULL);
-    if (!display)
+    if (!c->display)
         return;
-    if (!XF86VidModeQueryVersion(display, &major, &minor)
-            || major < 2 || (major == 2 && minor < 0)) {
-        XCloseDisplay(display);
-        return;
-    }
-    gamma.red = brightness;
-    gamma.green = gamma.red;
-    gamma.blue = gamma.red;
+    c->gamma.red = brightness;
+    c->gamma.green = c->gamma.red;
+    c->gamma.blue = c->gamma.red;
     
-    screen = DefaultScreen(display);
-    if (!XF86VidModeSetGamma(display, screen, &gamma)) {
-        XF86VidModeSetGamma(display, screen, &c->gamma);
-        XF86VidModeGetGamma(display, screen, &c->gamma);
-        XCloseDisplay(display);
+    if (!XF86VidModeSetGamma(c->display, c->screen, &c->gamma)) {
+        DBG("backlight: can't set gamma.\n");
         return;
     }
-    if (!XF86VidModeGetGamma(display, screen, &gamma)) {
-        XF86VidModeSetGamma(display, screen, &c->gamma);
-        XF86VidModeGetGamma(display, screen, &c->gamma);
-        XCloseDisplay(display);
-        return;
-    }
-    XCloseDisplay(display);
-    c->gamma.red = gamma.red;
-    c->gamma.green = gamma.green;
-    c->gamma.blue = gamma.blue;
+    DBG("backlight: gamma.red=%f, gamma.green=%f, gamma.blue=%f\n", c->gamma.red, c->gamma.green, c->gamma.blue);
 }
 
 static gboolean
@@ -220,6 +192,7 @@ icon_scrolled(GtkWidget *widget, GdkEventScroll *event, backlight_priv *c)
 static gint
 backlight_constructor(plugin_instance *p)
 {
+    gint major, minor;
     backlight_priv *c;
     ENTER;
     if (!(k = class_get("meter")))
@@ -227,6 +200,12 @@ backlight_constructor(plugin_instance *p)
     if (!PLUGIN_CLASS(k)->constructor(p))
         RET(0);
     c = (backlight_priv *) p;
+    c->display = XOpenDisplay(NULL);
+    if (!c->display)
+        RET(0);
+    if (!XF86VidModeQueryVersion(c->display, &major, &minor) || major < 2 || (major == 2 && minor < 0))
+        RET(0);
+    c->screen = DefaultScreen(c->display);
     get_gamma(c);
     k->set_icons(&c->meter, names);
     c->update_id = g_timeout_add(1000, (GSourceFunc) brightness_update_gui, c);
@@ -242,6 +221,7 @@ backlight_destructor(plugin_instance *p)
 {
     backlight_priv *c = (backlight_priv *) p;
     ENTER;
+    XCloseDisplay(c->display);
     g_source_remove(c->update_id);
     if (c->slider_window)
         gtk_widget_destroy(c->slider_window);
