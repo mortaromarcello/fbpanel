@@ -31,6 +31,7 @@ typedef struct {
     Display * display;
     gint screen;
     XF86VidModeGamma gamma;
+    gfloat brightness_max, brightness_min, brightness_step;
     gint update_id, leave_id;
     gint has_pointer;
     GtkWidget *slider_window;
@@ -92,7 +93,7 @@ brightness_update_gui(backlight_priv *c)
     ENTER;
     get_gamma(c);
     brightness = c->gamma.red;
-    k->set_level(&c->meter, f2perc(brightness, BRIGHTNESS_MAX));
+    k->set_level(&c->meter, f2perc(brightness, c->brightness_max));
     g_snprintf(buf, sizeof(buf), "<b>Brightness:</b> %-.2f%%", brightness);
     if (!c->slider_window)
         gtk_widget_set_tooltip_markup(((plugin_instance *)c)->pwid, buf);
@@ -134,7 +135,7 @@ brightness_create_slider(backlight_priv *c)
     gtk_frame_set_shadow_type(GTK_FRAME(frame), GTK_SHADOW_ETCHED_IN);
     gtk_container_add(GTK_CONTAINER(win), frame);
     gtk_container_set_border_width(GTK_CONTAINER(frame), 1);
-    slider = gtk_vscale_new_with_range(BRIGHTNESS_MIN, BRIGHTNESS_MAX, BRIGHTNESS_STEP);
+    slider = gtk_vscale_new_with_range(c->brightness_min, c->brightness_max, c->brightness_step);
     gtk_widget_set_size_request(slider, 25, 82);
     gtk_scale_set_draw_value(GTK_SCALE(slider), TRUE);
     gtk_scale_set_value_pos(GTK_SCALE(slider), GTK_POS_BOTTOM);
@@ -177,13 +178,13 @@ icon_scrolled(GtkWidget *widget, GdkEventScroll *event, backlight_priv *c)
     gfloat brightness;
     
     ENTER;
-    brightness = perc2f(((meter_priv *) c)->level, BRIGHTNESS_MAX);
+    brightness = perc2f(((meter_priv *) c)->level, c->brightness_max);
     brightness += ((event->direction == GDK_SCROLL_UP
             || event->direction == GDK_SCROLL_LEFT) ? BRIGHTNESS_STEP : -BRIGHTNESS_STEP);
-    if (brightness > BRIGHTNESS_MAX)
-        brightness = BRIGHTNESS_MAX;
-    if (brightness <= BRIGHTNESS_MIN)
-        brightness = BRIGHTNESS_MIN;
+    if (brightness > c->brightness_max)
+        brightness = c->brightness_max;
+    if (brightness <= c->brightness_min)
+        brightness = c->brightness_min;
     set_gamma(c, brightness);
     brightness_update_gui(c);
     RET(TRUE);
@@ -200,6 +201,16 @@ backlight_constructor(plugin_instance *p)
     if (!PLUGIN_CLASS(k)->constructor(p))
         RET(0);
     c = (backlight_priv *) p;
+    c->brightness_max = BRIGHTNESS_MAX;
+    c->brightness_min = BRIGHTNESS_MIN;
+    c->brightness_step = BRIGHTNESS_STEP;
+    XCG(p->xc, "bmax", &c->brightness_max, float);
+    XCG(p->xc, "bmin", &c->brightness_min, float);
+    XCG(p->xc, "bstep", &c->brightness_step, float);
+    if (!c->brightness_max) c->brightness_max = BRIGHTNESS_MAX;
+    if (!c->brightness_min) c->brightness_min = BRIGHTNESS_MIN;
+    if (!c->brightness_step) c->brightness_step = BRIGHTNESS_STEP;
+    DBG("backlight: brightness_max=%-.2f, brightness_min=%-.2f, brightness_step=%-.2f\n", c->brightness_max, c->brightness_min, c->brightness_step);
     c->display = XOpenDisplay(NULL);
     if (!c->display)
         RET(0);

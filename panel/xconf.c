@@ -117,6 +117,13 @@ void xconf_set_int(xconf *x, int i)
     x->value = g_strdup_printf("%d", i);
 }
 
+void xconf_set_float(xconf *x, float i)
+{
+    xconf_del(x, TRUE);
+    g_free(x->value);
+    x->value = g_strdup_printf("%f", i);
+}
+
 xconf *
 xconf_get(xconf *xc, gchar *name)
 {
@@ -206,6 +213,18 @@ void xconf_get_int(xconf *x, int *val)
     if (!s)
         return;
     *val = strtol(s, NULL, 0);
+}
+
+void xconf_get_float(xconf *x, float *val)
+{
+    gchar *s;
+
+    if (!x)
+        return;
+    s = xconf_get_value(x);
+    if (!s)
+        return;
+    *val = g_ascii_strtod(s, NULL);
 }
 
 void xconf_get_enum(xconf *x, int *val, xconf_enum *p)

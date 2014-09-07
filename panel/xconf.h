@@ -36,10 +36,12 @@ void xconf_save_to_profile(xconf *xc);
 
 xconf *xconf_get(xconf *x, gchar *name);
 void xconf_get_int(xconf *x, int *val);
+void xconf_get_float(xconf *x, float *val);
 void xconf_get_enum(xconf *x, int *val, xconf_enum *e);
 void xconf_get_str(xconf *x, gchar **val);
 
 void xconf_set_int(xconf *x, int val);
+void xconf_set_float(xconf *x, float val);
 void xconf_set_enum(xconf *x, int val, xconf_enum *e);
 
 #define XCG(xc, name, var, type, extra...)                      \
